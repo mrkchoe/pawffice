@@ -26,7 +26,7 @@ export function DogCard({
           alt={dog.name}
           fill
           className="object-cover transition duration-500 group-hover:scale-105"
-          sizes="(max-width:768px) 100vw, 33vw"
+          sizes="(max-width:640px) 100vw, (max-width:1024px) 50vw, 25vw"
         />
         <div className="absolute left-3 top-3 rounded-full bg-[var(--brand)] px-3 py-1 text-sm font-semibold text-white shadow">
           {match.score}% match
