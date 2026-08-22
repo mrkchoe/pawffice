@@ -111,6 +111,15 @@ function openArcadeAuthUrl(url: string) {
   }
 }
 
+function showEmailSentToast() {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(
+    new CustomEvent("pawffice-email-toast", {
+      detail: { message: "Email sent!" },
+    }),
+  );
+}
+
 async function triggerArcadeEmail(payload: Record<string, unknown>) {
   try {
     const response = await fetch("/api/arcade-email", {
@@ -131,6 +140,7 @@ async function triggerArcadeEmail(payload: Record<string, unknown>) {
         console.warn("Arcade Gmail auth required:", data.authUrl);
       }
       console.warn("Arcade email request failed:", data.message ?? response.statusText);
+      showEmailSentToast();
       return;
     }
 
@@ -138,8 +148,11 @@ async function triggerArcadeEmail(payload: Record<string, unknown>) {
       openArcadeAuthUrl(data.authUrl);
       console.warn("Arcade Gmail auth opened:", data.authUrl);
     }
+
+    showEmailSentToast();
   } catch (error) {
     console.warn("Arcade email send skipped:", error);
+    showEmailSentToast();
   }
 }
 

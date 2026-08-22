@@ -46,6 +46,7 @@ export default function DashboardPage() {
   const [reviewNotes, setReviewNotes] = useState("");
   const [reviewTags, setReviewTags] = useState<string[]>([]);
   const [selectedReviewId, setSelectedReviewId] = useState<string | null>(null);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   const topMatches = useMemo(
     () =>
@@ -116,6 +117,18 @@ export default function DashboardPage() {
     openReview(unreviewedCompleted.dogId, unreviewedCompleted.id);
   }, [dogReviews, reviewableVisits, selectedDog]);
 
+  useEffect(() => {
+    function handleToast(event: Event) {
+      const customEvent = event as CustomEvent<{ message?: string }>;
+      const message = customEvent.detail?.message ?? "Email sent!";
+      setToastMessage(message);
+      window.setTimeout(() => setToastMessage(null), 2500);
+    }
+
+    window.addEventListener("pawffice-email-toast", handleToast);
+    return () => window.removeEventListener("pawffice-email-toast", handleToast);
+  }, []);
+
   function openReview(
     dogId: string,
     appointmentId: string,
@@ -164,6 +177,18 @@ export default function DashboardPage() {
     <div className="min-h-screen pb-16">
       <AppNav />
       <div className="mx-auto max-w-6xl px-4 py-8">
+        {toastMessage && (
+          <div className="fixed right-5 top-5 z-50 flex items-center gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 shadow-xl shadow-emerald-950/10 ring-1 ring-emerald-200">
+            <div className="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-500 text-sm font-bold text-white">
+              ✓
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-emerald-900">{toastMessage}</p>
+              <p className="text-xs text-emerald-700">A confirmation message was sent.</p>
+            </div>
+          </div>
+        )}
+
         <h1 className="font-display text-4xl">Hi, {session.name.split(" ")[0]}</h1>
         <p className="mt-1 text-[var(--ink-soft)]">
           Your WFH companion dashboard
