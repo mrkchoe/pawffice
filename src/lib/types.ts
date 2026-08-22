@@ -90,6 +90,11 @@ export interface Shelter {
   id: string;
   name: string;
   email: string;
+  /**
+   * Arcade.dev user_id for this shelter's Google Calendar / Gmail.
+   * Must match the email of the signed-in Arcade account (not a fake demo address).
+   */
+  arcadeUserId?: string;
   phone: string;
   address: string;
   city: string;
@@ -131,14 +136,17 @@ export interface SavedDog {
 export interface Appointment {
   id: string;
   userId: string;
+  userName: string;
+  userEmail: string;
   dogId: string;
   shelterId: string;
   interactionType: InteractionType;
   startsAt: string;
   endsAt: string;
-  status: "scheduled" | "completed" | "cancelled";
+  status: "pending" | "approved" | "scheduled" | "rejected" | "completed" | "cancelled";
   calendarEventId?: string;
   calendarProvider: "mock" | "arcade";
+  emailId?: string;
   notes?: string;
   createdAt: string;
 }
@@ -160,6 +168,21 @@ export interface SuggestedSlot {
   endsAt: string;
   label: string;
   source: "mock" | "arcade";
+}
+
+export type OnboardingStep =
+  | "ask"
+  | "pick_dog"
+  | "around_dog"
+  | "availability"
+  | "swipe"
+  | "done";
+
+export interface OnboardingState {
+  step: OnboardingStep;
+  chosenDogId: string | null;
+  /** True after the user finishes the required companion swipe deck. */
+  swipeFinished: boolean;
 }
 
 export interface DemoState {

@@ -13,12 +13,17 @@ export function CompanionSwipe({
   onPass,
   onSave,
   onOpen,
+  onComplete,
+  required = false,
 }: {
   dogs: Dog[];
   matches: Record<string, MatchResult>;
   onPass: (id: string) => void;
   onSave: (id: string) => void;
   onOpen: (id: string) => void;
+  onComplete?: () => void;
+  /** When true, copy emphasizes finishing the deck before continuing. */
+  required?: boolean;
 }) {
   const [index, setIndex] = useState(0);
   const dog = dogs[index];
@@ -32,10 +37,21 @@ export function CompanionSwipe({
   if (!dog) {
     return (
       <div className="rounded-3xl border border-dashed border-[var(--line)] bg-white/70 p-10 text-center">
-        <p className="font-display text-2xl">You&apos;ve seen everyone nearby</p>
-        <p className="mt-2 text-[var(--ink-soft)]">
-          Check Matches for dogs you saved, or adjust filters on Discover.
+        <p className="font-display text-2xl">
+          {required
+            ? "You've reviewed every companion"
+            : "You've seen everyone nearby"}
         </p>
+        <p className="mt-2 text-[var(--ink-soft)]">
+          {required
+            ? "Saved dogs are in Matches. Continue to your dashboard."
+            : "Check Matches for dogs you saved, or adjust filters on Discover."}
+        </p>
+        {required && onComplete && (
+          <Button className="mt-6" onClick={onComplete}>
+            Continue
+          </Button>
+        )}
       </div>
     );
   }
@@ -60,7 +76,9 @@ export function CompanionSwipe({
   return (
     <div className="mx-auto w-full max-w-md">
       <p className="mb-3 text-center text-sm text-[var(--ink-soft)]">
-        Find a compatible companion · {remaining} left
+        {required
+          ? `Swipe to find a fit · ${remaining} left (required)`
+          : `Find a compatible companion · ${remaining} left`}
       </p>
       <div className="relative aspect-[3/4]">
         <motion.div

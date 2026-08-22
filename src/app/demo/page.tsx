@@ -11,7 +11,14 @@ function DemoInner() {
   const router = useRouter();
   const params = useSearchParams();
   const preferShelter = params.get("role") === "shelter";
-  const { loginAsAlex, loginAsShelter, resetDemo } = useDemo();
+  const { loginAsAlex, loginAsShelter, setBackgroundStatus, resetDemo } =
+    useDemo();
+
+  function startAsAlex(approve: boolean) {
+    loginAsAlex();
+    if (approve) setBackgroundStatus("approved");
+    router.push("/onboarding");
+  }
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-12">
@@ -22,9 +29,8 @@ function DemoInner() {
         Walk the Pawffice story in one click
       </h1>
       <p className="mt-3 text-[var(--ink-soft)]">
-        Alex works remotely and wants canine companionship. The app verifies
-        Alex, matches dogs to lifestyle + schedule, checks calendar
-        availability, and books a visit.
+        After login you&apos;ll be asked if you already have a dog in mind. If
+        not, you set 9am–3pm weekday availability and swipe to find a companion.
       </p>
 
       <div className="mt-8 grid gap-4 sm:grid-cols-2">
