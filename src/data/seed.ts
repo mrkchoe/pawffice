@@ -67,6 +67,7 @@ export const DEMO_DOGS: Dog[] = [
     goodWithDogs: true,
     goodWithCats: true,
     goodWithChildren: true,
+    goodWithStrangers: true,
     specialNeeds: null,
     interactionTypes: ["day_fostering", "dog_walking", "trial_adoption"],
     availability: weekdays,
@@ -91,6 +92,7 @@ export const DEMO_DOGS: Dog[] = [
     goodWithDogs: true,
     goodWithCats: false,
     goodWithChildren: true,
+    goodWithStrangers: true,
     specialNeeds: null,
     interactionTypes: ["dog_walking", "day_fostering", "weekend_fostering"],
     availability: weekendHeavy,
@@ -115,6 +117,7 @@ export const DEMO_DOGS: Dog[] = [
     goodWithDogs: true,
     goodWithCats: true,
     goodWithChildren: true,
+    goodWithStrangers: true,
     specialNeeds: "Mild arthritis — short walks preferred",
     interactionTypes: ["day_fostering", "trial_adoption", "adoption"],
     availability: weekdays,
@@ -139,6 +142,7 @@ export const DEMO_DOGS: Dog[] = [
     goodWithDogs: true,
     goodWithCats: false,
     goodWithChildren: false,
+    goodWithStrangers: false,
     specialNeeds: null,
     interactionTypes: ["weekend_fostering", "dog_walking", "trial_adoption"],
     availability: weekendHeavy,
@@ -163,6 +167,7 @@ export const DEMO_DOGS: Dog[] = [
     goodWithDogs: true,
     goodWithCats: true,
     goodWithChildren: true,
+    goodWithStrangers: true,
     specialNeeds: null,
     interactionTypes: [
       "day_fostering",
@@ -192,6 +197,7 @@ export const DEMO_DOGS: Dog[] = [
     goodWithDogs: false,
     goodWithCats: false,
     goodWithChildren: true,
+    goodWithStrangers: false,
     specialNeeds: "Needs a quiet intro to new people",
     interactionTypes: ["weekend_fostering", "trial_adoption", "adoption"],
     availability: weekendHeavy,
@@ -216,6 +222,7 @@ export const DEMO_DOGS: Dog[] = [
     goodWithDogs: true,
     goodWithCats: true,
     goodWithChildren: true,
+    goodWithStrangers: true,
     specialNeeds: null,
     interactionTypes: ["dog_walking", "day_fostering", "trial_adoption"],
     availability: weekdays,
@@ -240,6 +247,7 @@ export const DEMO_DOGS: Dog[] = [
     goodWithDogs: true,
     goodWithCats: true,
     goodWithChildren: true,
+    goodWithStrangers: true,
     specialNeeds: null,
     interactionTypes: ["day_fostering", "trial_adoption", "adoption"],
     availability: [
@@ -268,6 +276,7 @@ export const DEMO_ALEX_PREFERENCES: UserPreferences = {
   maxExerciseMinutes: 60,
   interestedIn: ["day_fostering", "dog_walking", "trial_adoption"],
   temperamentPreferences: ["gentle", "apartment-friendly", "curious"],
+  mustBeGoodWith: [],
   maxDistanceMiles: 15,
 };
 
@@ -286,6 +295,7 @@ export function blankUserPreferences(userId: string): UserPreferences {
     maxExerciseMinutes: 45,
     interestedIn: [],
     temperamentPreferences: [],
+    mustBeGoodWith: [],
     maxDistanceMiles: 15,
   };
 }

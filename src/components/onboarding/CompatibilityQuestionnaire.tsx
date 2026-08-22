@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useMemo, useState, type FormEvent, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
+import { Dog, Search } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { blankUserPreferences } from "@/data/seed";
 import { useDemo } from "@/lib/demo/store";
@@ -45,17 +46,43 @@ const INTERACTIONS: { value: InteractionType; label: string }[] = [
   { value: "dog_walking", label: "Walking" },
   { value: "day_fostering", label: "Day fostering" },
   { value: "weekend_fostering", label: "Weekend fostering" },
-  { value: "trial_adoption", label: "Trial adoption" },
   { value: "adoption", label: "Adoption" },
+];
+
+const SIZE_OPTIONS: {
+  value: SizePreference;
+  label: string;
+  hint: string;
+  iconClass: string;
+}[] = [
+  { value: "small", label: "Small", hint: "Under 25 lbs", iconClass: "h-7 w-7" },
+  { value: "medium", label: "Medium", hint: "25–55 lbs", iconClass: "h-10 w-10" },
+  { value: "large", label: "Large", hint: "55+ lbs", iconClass: "h-14 w-14" },
+  { value: "no_preference", label: "Any size", hint: "No preference", iconClass: "h-9 w-9" },
 ];
 
 export function CompatibilityQuestionnaire() {
   const router = useRouter();
-  const { session, preferences, setPreferences, setBackgroundStatus } = useDemo();
+  const { session, preferences, setPreferences, setBackgroundStatus, dogs } =
+    useDemo();
   const [step, setStep] = useState(0);
+  const [animalQuery, setAnimalQuery] = useState("");
   const [draft, setDraft] = useState<UserPreferences>(
     () => preferences ?? blankUserPreferences(session?.id ?? "demo-alex"),
   );
+
+  const animalHits = useMemo(() => {
+    const q = animalQuery.trim().toLowerCase();
+    if (!q) return [];
+    return dogs
+      .filter(
+        (d) =>
+          d.name.toLowerCase().includes(q) ||
+          d.id.toLowerCase().includes(q) ||
+          d.breed.toLowerCase().includes(q),
+      )
+      .slice(0, 6);
+  }, [animalQuery, dogs]);
 
   function update<K extends keyof UserPreferences>(key: K, value: UserPreferences[K]) {
     setDraft((d) => ({ ...d, [key]: value, userId: session?.id ?? d.userId }));
@@ -93,9 +120,67 @@ export function CompatibilityQuestionnaire() {
     router.push("/discover");
   }
 
+  function onAnimalSearch(e: FormEvent) {
+    e.preventDefault();
+    if (animalHits.length === 1) {
+      router.push(`/discover/${animalHits[0].id}`);
+    }
+  }
+
   return (
     <div className="mx-auto max-w-2xl px-4 py-12">
-      <p className="text-sm font-medium uppercase tracking-[0.18em] text-[var(--brand)]">
+      <form onSubmit={onAnimalSearch} className="relative">
+        <label className="sr-only" htmlFor="animal-search">
+          Search by animal ID or name
+        </label>
+        <div className="relative">
+          <Search
+            className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--ink-soft)]"
+            aria-hidden
+          />
+          <input
+            id="animal-search"
+            type="search"
+            autoComplete="off"
+            placeholder="Animal ID, Name, etc."
+            value={animalQuery}
+            onChange={(e) => setAnimalQuery(e.target.value)}
+            className="w-full rounded-full border border-[var(--line)] bg-white py-3 pl-11 pr-4 text-sm outline-none ring-[var(--brand)] placeholder:text-[var(--ink-soft)] focus:ring-2"
+          />
+        </div>
+        {animalHits.length > 0 ? (
+          <ul className="absolute z-10 mt-2 w-full overflow-hidden rounded-2xl bg-white shadow-lg ring-1 ring-[var(--line)]">
+            {animalHits.map((dog) => (
+              <li key={dog.id}>
+                <button
+                  type="button"
+                  onClick={() => router.push(`/discover/${dog.id}`)}
+                  className="flex w-full items-center gap-3 px-4 py-2.5 text-left hover:bg-[var(--bg-deep)]"
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={dog.photoUrl}
+                    alt=""
+                    className="h-10 w-10 rounded-full object-cover"
+                  />
+                  <span>
+                    <span className="block font-medium">{dog.name}</span>
+                    <span className="text-xs text-[var(--ink-soft)]">
+                      {dog.id} · {dog.breed}
+                    </span>
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        ) : animalQuery.trim() !== "" ? (
+          <p className="mt-2 text-sm text-[var(--ink-soft)]">
+            No animals match that search.
+          </p>
+        ) : null}
+      </form>
+
+      <p className="mt-8 text-sm font-medium uppercase tracking-[0.18em] text-[var(--brand)]">
         Compatibility questionnaire
       </p>
       <h1 className="mt-2 font-display text-4xl text-[var(--ink)]">
@@ -169,21 +254,21 @@ export function CompatibilityQuestionnaire() {
 
         {step === 1 && (
           <div className="space-y-5">
-            <label className="block text-sm">
-              Preferred size
-              <select
-                className="mt-1 w-full rounded-xl border border-[var(--line)] px-3 py-2"
-                value={draft.preferredSize}
-                onChange={(e) =>
-                  update("preferredSize", e.target.value as SizePreference)
-                }
-              >
-                <option value="no_preference">No preference</option>
-                <option value="small">Small</option>
-                <option value="medium">Medium</option>
-                <option value="large">Large</option>
-              </select>
-            </label>
+            <fieldset>
+              <legend className="text-sm text-[var(--ink-soft)]">Preferred size</legend>
+              <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
+                {SIZE_OPTIONS.map((opt) => (
+                  <SizeTile
+                    key={opt.value}
+                    selected={draft.preferredSize === opt.value}
+                    label={opt.label}
+                    hint={opt.hint}
+                    iconClass={opt.iconClass}
+                    onClick={() => update("preferredSize", opt.value)}
+                  />
+                ))}
+              </div>
+            </fieldset>
             <label className="block text-sm">
               Preferred energy
               <select
@@ -358,6 +443,43 @@ function Chip({
       }`}
     >
       {children}
+    </button>
+  );
+}
+
+function SizeTile({
+  selected,
+  onClick,
+  label,
+  hint,
+  iconClass,
+}: {
+  selected: boolean;
+  onClick: () => void;
+  label: string;
+  hint: string;
+  iconClass: string;
+}) {
+  return (
+    <button
+      type="button"
+      aria-pressed={selected}
+      onClick={onClick}
+      className={`flex min-h-[8.5rem] flex-col items-center justify-end gap-1 rounded-2xl px-2 py-4 ring-1 transition ${
+        selected
+          ? "bg-[var(--brand)] text-white ring-[var(--brand)]"
+          : "bg-[var(--bg-deep)] text-[var(--ink)] ring-transparent hover:ring-[var(--brand)]"
+      }`}
+    >
+      <Dog className={`${iconClass} mb-1`} strokeWidth={1.75} aria-hidden />
+      <span className="font-display text-base leading-tight">{label}</span>
+      <span
+        className={`text-[0.7rem] leading-tight ${
+          selected ? "text-white/80" : "text-[var(--ink-soft)]"
+        }`}
+      >
+        {hint}
+      </span>
     </button>
   );
 }

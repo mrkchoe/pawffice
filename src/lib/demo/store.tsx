@@ -38,6 +38,7 @@ function emptyState(): DemoState {
     activity: [],
     passedDogIds: [],
     calendarMode: "mock",
+    liabilityWaiver: null,
   };
 }
 
