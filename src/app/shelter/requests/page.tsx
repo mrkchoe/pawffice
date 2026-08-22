@@ -146,66 +146,6 @@ export default function ShelterRequestsPage() {
         </div>
 
         <section className="mt-10">
-          <h2 className="font-display text-2xl">Appointment Requests</h2>
-          <p className="mt-1 text-sm text-[var(--ink-soft)]">
-            Users who asked to meet or foster a listed dog.
-          </p>
-          {appointmentRequests.length === 0 ? (
-            <p className="mt-4 text-sm text-[var(--ink-soft)]">
-              No appointment requests yet.
-            </p>
-          ) : (
-            <ul className="mt-4 space-y-3">
-              {appointmentRequests.map((r) => (
-                <li
-                  key={r.id}
-                  className="flex flex-wrap items-center gap-4 rounded-3xl bg-white p-4 ring-1 ring-[var(--line)]"
-                >
-                  <Link
-                    href={`/discover/${r.dogId}`}
-                    className="relative h-14 w-14 shrink-0 overflow-hidden rounded-full ring-1 ring-[var(--line)]"
-                  >
-                    {r.dogPhoto ? (
-                      <Image
-                        src={r.dogPhoto}
-                        alt={r.dogName}
-                        fill
-                        className="object-cover"
-                        sizes="56px"
-                      />
-                    ) : null}
-                  </Link>
-                  <div className="min-w-0 flex-1">
-                    <p className="font-medium text-[var(--ink)]">
-                      {r.userName}
-                      <CleanBgCheck userId={r.userId} />{" "}
-                      <span className="font-normal text-[var(--ink-soft)]">
-                        → {r.dogName}
-                      </span>
-                    </p>
-                    <p className="truncate text-sm text-[var(--ink-soft)]">
-                      {r.userEmail} · {r.interest}
-                    </p>
-                    <p className="mt-1 text-xs text-[var(--ink-soft)]">
-                      {format(new Date(r.at), "MMM d, yyyy")}
-                      {"status" in r && r.status
-                        ? ` · ${String(r.status)}`
-                        : ""}
-                    </p>
-                  </div>
-                  <Button
-                    variant="secondary"
-                    onClick={() => router.push(`/discover/${r.dogId}`)}
-                  >
-                    View dog
-                  </Button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
-
-        <section className="mt-12">
           <h2 className="font-display text-2xl">Background Checks</h2>
           <p className="mt-1 text-sm text-[var(--ink-soft)]">
             Mock Checkr submissions waiting for shelter review.
@@ -299,6 +239,66 @@ export default function ShelterRequestsPage() {
                 ))}
               </ul>
             </div>
+          )}
+        </section>
+
+        <section className="mt-12">
+          <h2 className="font-display text-2xl">Appointment Requests</h2>
+          <p className="mt-1 text-sm text-[var(--ink-soft)]">
+            Users who asked to meet or foster a listed dog.
+          </p>
+          {appointmentRequests.length === 0 ? (
+            <p className="mt-4 text-sm text-[var(--ink-soft)]">
+              No appointment requests yet.
+            </p>
+          ) : (
+            <ul className="mt-4 space-y-3">
+              {appointmentRequests.map((r) => (
+                <li
+                  key={r.id}
+                  className="flex flex-wrap items-center gap-4 rounded-3xl bg-white p-4 ring-1 ring-[var(--line)]"
+                >
+                  <Link
+                    href={`/discover/${r.dogId}`}
+                    className="relative h-14 w-14 shrink-0 overflow-hidden rounded-full ring-1 ring-[var(--line)]"
+                  >
+                    {r.dogPhoto ? (
+                      <Image
+                        src={r.dogPhoto}
+                        alt={r.dogName}
+                        fill
+                        className="object-cover"
+                        sizes="56px"
+                      />
+                    ) : null}
+                  </Link>
+                  <div className="min-w-0 flex-1">
+                    <p className="font-medium text-[var(--ink)]">
+                      {r.userName}
+                      <CleanBgCheck userId={r.userId} />{" "}
+                      <span className="font-normal text-[var(--ink-soft)]">
+                        → {r.dogName}
+                      </span>
+                    </p>
+                    <p className="truncate text-sm text-[var(--ink-soft)]">
+                      {r.userEmail} · {r.interest}
+                    </p>
+                    <p className="mt-1 text-xs text-[var(--ink-soft)]">
+                      {format(new Date(r.at), "MMM d, yyyy")}
+                      {"status" in r && r.status
+                        ? ` · ${String(r.status)}`
+                        : ""}
+                    </p>
+                  </div>
+                  <Button
+                    variant="secondary"
+                    onClick={() => router.push(`/discover/${r.dogId}`)}
+                  >
+                    View dog
+                  </Button>
+                </li>
+              ))}
+            </ul>
           )}
         </section>
       </div>
