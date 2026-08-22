@@ -1,12 +1,12 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useState, type CSSProperties, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
+import { MonthCalendar } from "@/components/onboarding/MonthCalendar";
 import { blankUserPreferences } from "@/data/seed";
 import { useDemo } from "@/lib/demo/store";
 import type {
-  DayOfWeek,
   EnergyPreference,
   HousingType,
   InteractionType,
@@ -20,16 +20,6 @@ const STEPS = [
   { title: "Your week", blurb: "Overlapping availability is 20% of the match score." },
   { title: "Background check", blurb: "A mock Checkr step before you can book a visit." },
 ] as const;
-
-const DAYS: DayOfWeek[] = [
-  "monday",
-  "tuesday",
-  "wednesday",
-  "thursday",
-  "friday",
-  "saturday",
-  "sunday",
-];
 
 const TEMPERAMENTS = [
   "gentle",
@@ -51,7 +41,8 @@ const INTERACTIONS: { value: InteractionType; label: string }[] = [
 
 export function CompatibilityQuestionnaire() {
   const router = useRouter();
-  const { session, preferences, setPreferences, setBackgroundStatus } = useDemo();
+  const { session, preferences, setPreferences, setBackgroundStatus, calendarMode } =
+    useDemo();
   const [step, setStep] = useState(0);
   const [draft, setDraft] = useState<UserPreferences>(
     () => preferences ?? blankUserPreferences(session?.id ?? "demo-alex"),
@@ -59,18 +50,6 @@ export function CompatibilityQuestionnaire() {
 
   function update<K extends keyof UserPreferences>(key: K, value: UserPreferences[K]) {
     setDraft((d) => ({ ...d, [key]: value, userId: session?.id ?? d.userId }));
-  }
-
-  function toggleDay(day: DayOfWeek) {
-    setDraft((d) => {
-      const exists = d.availability.some((a) => a.day === day);
-      return {
-        ...d,
-        availability: exists
-          ? d.availability.filter((a) => a.day !== day)
-          : [...d.availability, { day, ranges: [{ start: "12:00", end: "17:00" }] }],
-      };
-    });
   }
 
   function toggleChip<T extends string>(key: "temperamentPreferences" | "interestedIn", value: T) {
@@ -92,6 +71,9 @@ export function CompatibilityQuestionnaire() {
     if (submitCheck) setBackgroundStatus("pending");
     router.push("/discover");
   }
+
+  const distancePercent = ((draft.maxDistanceMiles - 1) / (50 - 1)) * 100;
+  const exercisePercent = ((draft.maxExerciseMinutes - 15) / (120 - 15)) * 100;
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-12">
@@ -151,6 +133,7 @@ export function CompatibilityQuestionnaire() {
             <label className="inline-flex items-center gap-2 text-sm">
               <input
                 type="checkbox"
+                className="accent-[var(--brand)]"
                 checked={draft.petsAllowed}
                 onChange={(e) => update("petsAllowed", e.target.checked)}
               />
@@ -159,6 +142,7 @@ export function CompatibilityQuestionnaire() {
             <label className="flex items-center gap-2 text-sm">
               <input
                 type="checkbox"
+                className="accent-[var(--brand)]"
                 checked={draft.hasYard}
                 onChange={(e) => update("hasYard", e.target.checked)}
               />
@@ -199,18 +183,34 @@ export function CompatibilityQuestionnaire() {
                 <option value="high">High — trail energy</option>
               </select>
             </label>
-            <label className="block text-sm">
-              Max daily exercise ({draft.maxExerciseMinutes} min)
-              <input
-                type="range"
-                min={15}
-                max={120}
-                step={5}
-                className="mt-2 w-full"
-                value={draft.maxExerciseMinutes}
-                onChange={(e) => update("maxExerciseMinutes", Number(e.target.value))}
-              />
-            </label>
+            <div className="text-sm">
+              Max daily exercise
+              <div className="relative mt-3">
+                <input
+                  type="range"
+                  min={15}
+                  max={120}
+                  step={5}
+                  value={draft.maxExerciseMinutes}
+                  onChange={(e) => update("maxExerciseMinutes", Number(e.target.value))}
+                  style={{ "--fill": `${exercisePercent}%` } as CSSProperties}
+                  className="distance-slider h-2 w-full cursor-pointer"
+                />
+                <div className="relative mt-1.5 h-5 text-[10px] text-[var(--ink-soft)]">
+                  <span className="absolute left-0">15 min</span>
+                  <span className="absolute right-0">120 min</span>
+                  <span
+                    className="absolute font-display text-sm font-medium text-[var(--brand)]"
+                    style={{
+                      left: `${Math.min(94, Math.max(6, exercisePercent))}%`,
+                      transform: "translateX(-50%)",
+                    }}
+                  >
+                    {draft.maxExerciseMinutes} min
+                  </span>
+                </div>
+              </div>
+            </div>
             <fieldset>
               <legend className="text-sm text-[var(--ink-soft)]">Temperament</legend>
               <div className="mt-2 flex flex-wrap gap-2">
@@ -251,50 +251,51 @@ export function CompatibilityQuestionnaire() {
 
         {step === 2 && (
           <div className="space-y-5">
-            <fieldset>
-              <legend className="text-sm text-[var(--ink-soft)]">
-                Days you can host or walk (afternoons by default)
-              </legend>
-              <div className="mt-2 flex flex-wrap gap-2">
-                {DAYS.map((day) => (
-                  <Chip
-                    key={day}
-                    selected={draft.availability.some((a) => a.day === day)}
-                    onClick={() => toggleDay(day)}
-                  >
-                    {day.slice(0, 3)}
-                  </Chip>
-                ))}
+            <div>
+              <p className="text-sm text-[var(--ink-soft)]">
+                Tap the windows that work for you. Each tap writes straight to your calendar.
+              </p>
+              <div className="mt-3">
+                <MonthCalendar
+                  onChange={(availability) => update("availability", availability)}
+                  userId={session?.id ?? draft.userId}
+                  calendarMode={calendarMode}
+                />
               </div>
               {draft.availability.length === 0 && (
                 <p className="mt-2 text-xs text-[var(--danger)]">
-                  Select at least one available day.
+                  Select at least one available window.
                 </p>
               )}
-            </fieldset>
-            <label className="block text-sm">
-              WFH rhythm
-              <textarea
-                className="mt-1 w-full rounded-xl border border-[var(--line)] px-3 py-2"
-                rows={2}
-                placeholder="e.g. Remote weekdays, free after 12pm standup"
-                value={draft.wfhSchedule}
-                onChange={(e) => update("wfhSchedule", e.target.value)}
-              />
-            </label>
-            <label className="block text-sm">
-              Max distance to a shelter
-              <select
-                className="mt-1 w-full rounded-xl border border-[var(--line)] px-3 py-2"
-                value={draft.maxDistanceMiles}
-                onChange={(e) => update("maxDistanceMiles", Number(e.target.value))}
-              >
-                <option value={5}>Within 5 miles</option>
-                <option value={10}>Within 10 miles</option>
-                <option value={15}>Within 15 miles</option>
-                <option value={25}>Within 25 miles</option>
-              </select>
-            </label>
+            </div>
+            <div>
+              <p className="text-sm">Max distance to a shelter</p>
+              <div className="relative mt-3">
+                <input
+                  type="range"
+                  min={1}
+                  max={50}
+                  step={1}
+                  value={draft.maxDistanceMiles}
+                  onChange={(e) => update("maxDistanceMiles", Number(e.target.value))}
+                  style={{ "--fill": `${distancePercent}%` } as CSSProperties}
+                  className="distance-slider h-2 w-full cursor-pointer"
+                />
+                <div className="relative mt-1.5 h-5 text-[10px] text-[var(--ink-soft)]">
+                  <span className="absolute left-0">1 mi</span>
+                  <span className="absolute right-0">50 mi</span>
+                  <span
+                    className="absolute font-display text-sm font-medium text-[var(--brand)]"
+                    style={{
+                      left: `${Math.min(94, Math.max(6, distancePercent))}%`,
+                      transform: "translateX(-50%)",
+                    }}
+                  >
+                    {draft.maxDistanceMiles} mi
+                  </span>
+                </div>
+              </div>
+            </div>
           </div>
         )}
 

@@ -246,6 +246,7 @@ export default function ProfilePage() {
               <label className="inline-flex items-center gap-2">
                 <input
                   type="checkbox"
+                  className="accent-[var(--brand)]"
                   checked={prefs.petsAllowed}
                   onChange={(e) => update("petsAllowed", e.target.checked)}
                 />
@@ -254,6 +255,7 @@ export default function ProfilePage() {
               <label className="inline-flex items-center gap-2">
                 <input
                   type="checkbox"
+                  className="accent-[var(--brand)]"
                   checked={prefs.hasYard}
                   onChange={(e) => update("hasYard", e.target.checked)}
                 />

@@ -14,7 +14,7 @@ import type { DayAvailability, InteractionType } from "@/lib/types";
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const action = body.action as "suggest" | "book";
+    const action = body.action as "suggest" | "book" | "block";
     const userId = String(body.userId ?? "demo-alex");
     const mode = (body.calendarMode as "mock" | "arcade") ?? "mock";
 
@@ -117,6 +117,46 @@ export async function POST(request: Request) {
         event: {
           id: event.id,
           title: event.title,
+          start: event.start.toISOString(),
+          end: event.end.toISOString(),
+          htmlLink: event.htmlLink,
+          provider: event.provider,
+        },
+      });
+    }
+
+    if (action === "block") {
+      // Onboarding "Your week" step: user taps a slot on the calendar grid,
+      // we immediately write a recurring-looking hold onto their real calendar
+      // (next upcoming occurrence of that weekday/time) via the same
+      // CalendarProvider used for visit booking.
+      const { label, startsAt, endsAt } = body as {
+        label: string;
+        startsAt: string;
+        endsAt: string;
+      };
+
+      if (calendar.ensureAuthorized) {
+        const auth = await calendar.ensureAuthorized(userId);
+        if (!auth.authorized) {
+          return NextResponse.json(
+            { error: "Calendar authorization required", authUrl: auth.authUrl },
+            { status: 401 },
+          );
+        }
+      }
+
+      const event = await calendar.createEvent({
+        title: `Pawffice — open for a dog visit (${label})`,
+        description:
+          "You marked this window as available on Pawffice. A shelter or dog may be matched to this time.",
+        start: new Date(startsAt),
+        end: new Date(endsAt),
+      });
+
+      return NextResponse.json({
+        event: {
+          id: event.id,
           start: event.start.toISOString(),
           end: event.end.toISOString(),
           htmlLink: event.htmlLink,

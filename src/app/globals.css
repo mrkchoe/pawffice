@@ -79,3 +79,60 @@ h3,
 .animate-fade-up-delay-2 {
   animation: fade-up 0.7s ease-out 0.3s both;
 }
+
+/* Distance slider — green fill to the left of the thumb, styled cross-browser. */
+.distance-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+}
+
+.distance-slider::-webkit-slider-runnable-track {
+  height: 8px;
+  border-radius: 9999px;
+  background: linear-gradient(
+    to right,
+    var(--brand) var(--fill, 0%),
+    var(--bg-deep) var(--fill, 0%)
+  );
+}
+
+.distance-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  margin-top: -6px;
+  height: 20px;
+  width: 20px;
+  border-radius: 9999px;
+  background: var(--brand);
+  border: 3px solid var(--card);
+  box-shadow: 0 1px 4px rgba(28, 43, 36, 0.35);
+  cursor: pointer;
+}
+
+.distance-slider::-moz-range-track {
+  height: 8px;
+  border-radius: 9999px;
+  background: var(--bg-deep);
+}
+
+.distance-slider::-moz-range-progress {
+  height: 8px;
+  border-radius: 9999px;
+  background: var(--brand);
+}
+
+.distance-slider::-moz-range-thumb {
+  height: 20px;
+  width: 20px;
+  border-radius: 9999px;
+  background: var(--brand);
+  border: 3px solid var(--card);
+  box-shadow: 0 1px 4px rgba(28, 43, 36, 0.35);
+  cursor: pointer;
+}
+
+/* Calendar card — warm corner glow, poster-ish without leaving the palette. */
+.calendar-card {
+  background: var(--card);
+}
