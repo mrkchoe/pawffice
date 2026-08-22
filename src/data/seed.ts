@@ -702,6 +702,35 @@ export const DEMO_BACKGROUND_CHECKS: {
   },
 ];
 
+export const WEEKDAY_9_TO_3: DayAvailability[] = [
+  { day: "monday", ranges: [{ start: "09:00", end: "15:00" }] },
+  { day: "tuesday", ranges: [{ start: "09:00", end: "15:00" }] },
+  { day: "wednesday", ranges: [{ start: "09:00", end: "15:00" }] },
+  { day: "thursday", ranges: [{ start: "09:00", end: "15:00" }] },
+  { day: "friday", ranges: [{ start: "09:00", end: "15:00" }] },
+];
+
+export const DEMO_ALEX_PREFERENCES: UserPreferences = {
+  userId: "demo-alex",
+  wfhSchedule: "Remote Mon–Fri, flexible afternoons after standup",
+  availability: [
+    { day: "tuesday", ranges: [{ start: "12:00", end: "17:00" }] },
+    { day: "thursday", ranges: [{ start: "12:00", end: "17:00" }] },
+    { day: "saturday", ranges: [{ start: "10:00", end: "16:00" }] },
+  ],
+  housingType: "apartment",
+  petsAllowed: true,
+  hasYard: false,
+  dogExperience: "some",
+  preferredSize: "medium",
+  preferredEnergy: "medium",
+  maxExerciseMinutes: 60,
+  interestedIn: ["day_fostering", "dog_walking", "trial_adoption"],
+  temperamentPreferences: ["gentle", "apartment-friendly", "curious"],
+  mustBeGoodWith: [],
+  maxDistanceMiles: 15,
+};
+
 /** Compatibility survey answers shown when reviewing a background check. */
 export const DEMO_SURVEY_RESPONSES: Record<string, UserPreferences> = {
   "demo-alex": DEMO_ALEX_PREFERENCES,
@@ -765,35 +794,6 @@ export const DEMO_SURVEY_RESPONSES: Record<string, UserPreferences> = {
     mustBeGoodWith: ["strangers"],
     maxDistanceMiles: 15,
   },
-};
-
-export const WEEKDAY_9_TO_3: DayAvailability[] = [
-  { day: "monday", ranges: [{ start: "09:00", end: "15:00" }] },
-  { day: "tuesday", ranges: [{ start: "09:00", end: "15:00" }] },
-  { day: "wednesday", ranges: [{ start: "09:00", end: "15:00" }] },
-  { day: "thursday", ranges: [{ start: "09:00", end: "15:00" }] },
-  { day: "friday", ranges: [{ start: "09:00", end: "15:00" }] },
-];
-
-export const DEMO_ALEX_PREFERENCES: UserPreferences = {
-  userId: "demo-alex",
-  wfhSchedule: "Remote Mon–Fri, flexible afternoons after standup",
-  availability: [
-    { day: "tuesday", ranges: [{ start: "12:00", end: "17:00" }] },
-    { day: "thursday", ranges: [{ start: "12:00", end: "17:00" }] },
-    { day: "saturday", ranges: [{ start: "10:00", end: "16:00" }] },
-  ],
-  housingType: "apartment",
-  petsAllowed: true,
-  hasYard: false,
-  dogExperience: "some",
-  preferredSize: "medium",
-  preferredEnergy: "medium",
-  maxExerciseMinutes: 60,
-  interestedIn: ["day_fostering", "dog_walking", "trial_adoption"],
-  temperamentPreferences: ["gentle", "apartment-friendly", "curious"],
-  mustBeGoodWith: [],
-  maxDistanceMiles: 15,
 };
 
 /** Starting answers for the compatibility questionnaire (not Alex's shortcut profile). */
