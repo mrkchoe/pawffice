@@ -17,6 +17,7 @@ const prefs: UserPreferences = {
   maxExerciseMinutes: 60,
   interestedIn: ["day_fostering", "dog_walking", "trial_adoption"],
   temperamentPreferences: ["gentle", "apartment-friendly", "curious"],
+  mustBeGoodWith: ["kids"],
   maxDistanceMiles: 15,
 };
 
@@ -36,11 +37,15 @@ const baseDog: Dog = {
   goodWithDogs: true,
   goodWithCats: false,
   goodWithChildren: true,
+  goodWithStrangers: true,
   specialNeeds: "Needs training",
   interactionTypes: ["weekend_fostering"],
   availability: [{ day: "tuesday", ranges: [{ start: "09:00", end: "11:00" }] }],
   location: "San Francisco, CA",
   distanceMiles: 18,
+  rating: 4.5,
+  shelterNotes: "",
+  experienceLog: [],
 };
 
 test("reviewed dogs earn a small dynamic match boost from positive behavior feedback", () => {

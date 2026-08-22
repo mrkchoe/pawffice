@@ -773,7 +773,6 @@ export function DemoProvider({ children }: { children: ReactNode }) {
       if (!s.session) return s;
       const basePrefs = s.preferences ?? blankUserPreferences(s.session.id);
       const availability = WEEKDAY_9_TO_3.filter((d) => days.includes(d.day));
-      const basePrefs = s.preferences ?? blankUserPreferences(s.session.id);
       return {
         ...s,
         preferences: {
