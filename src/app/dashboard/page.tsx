@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import Link from "next/link";
 import { AppNav } from "@/components/layout/AppNav";
 import { DogCard } from "@/components/dogs/DogCard";
@@ -51,6 +51,19 @@ export default function DashboardPage() {
         .slice(0, 3),
     [appointments, session?.id],
   );
+
+  useEffect(() => {
+    if (session && !preferences) router.replace("/onboarding");
+  }, [session, preferences, router]);
+
+  if (session && !preferences) {
+    return (
+      <div className="min-h-screen">
+        <AppNav />
+        <p className="p-8 text-[var(--ink-soft)]">Loading…</p>
+      </div>
+    );
+  }
 
   if (!session) {
     return (

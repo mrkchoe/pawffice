@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AppNav } from "@/components/layout/AppNav";
 import { DogCard } from "@/components/dogs/DogCard";
@@ -54,7 +54,12 @@ export default function DiscoverPage() {
     [ranked],
   );
 
-  if (!hydrated) {
+  useEffect(() => {
+    if (!hydrated) return;
+    if (session && !preferences) router.replace("/onboarding");
+  }, [hydrated, session, preferences, router]);
+
+  if (!hydrated || (session && !preferences)) {
     return (
       <div className="min-h-screen">
         <AppNav />

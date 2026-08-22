@@ -15,7 +15,8 @@ const links = [
 
 export function AppNav() {
   const pathname = usePathname();
-  const { session, logout } = useDemo();
+  const { session, preferences, logout } = useDemo();
+  const wfhReady = session?.role === "wfh" && Boolean(preferences);
 
   return (
     <header className="sticky top-0 z-40 border-b border-[var(--line)]/80 bg-[var(--bg)]/85 backdrop-blur-md">
@@ -29,7 +30,7 @@ export function AppNav() {
           </span>
         </Link>
 
-        {session?.role === "wfh" && (
+        {wfhReady && (
           <nav className="hidden items-center gap-1 md:flex">
             {links.map(({ href, label, icon: Icon }) => {
               const active = pathname.startsWith(href);
@@ -72,7 +73,13 @@ export function AppNav() {
           {session ? (
             <>
               <Link
-                href={session.role === "shelter" ? "/shelter/dashboard" : "/dashboard"}
+                href={
+                  session.role === "shelter"
+                    ? "/shelter/dashboard"
+                    : preferences
+                      ? "/dashboard"
+                      : "/onboarding"
+                }
                 className="hidden text-sm text-[var(--ink-soft)] sm:inline"
               >
                 {session.name}
@@ -96,7 +103,7 @@ export function AppNav() {
         </div>
       </div>
 
-      {session?.role === "wfh" && (
+      {wfhReady && (
         <nav className="flex gap-1 overflow-x-auto border-t border-[var(--line)]/60 px-2 py-2 md:hidden">
           {links.map(({ href, label, icon: Icon }) => {
             const active = pathname.startsWith(href);

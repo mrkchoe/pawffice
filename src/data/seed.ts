@@ -270,3 +270,22 @@ export const DEMO_ALEX_PREFERENCES: UserPreferences = {
   temperamentPreferences: ["gentle", "apartment-friendly", "curious"],
   maxDistanceMiles: 15,
 };
+
+/** Starting answers for the compatibility questionnaire (not Alex's shortcut profile). */
+export function blankUserPreferences(userId: string): UserPreferences {
+  return {
+    userId,
+    wfhSchedule: "",
+    availability: [],
+    housingType: "apartment",
+    petsAllowed: true,
+    hasYard: false,
+    dogExperience: "none",
+    preferredSize: "no_preference",
+    preferredEnergy: "no_preference",
+    maxExerciseMinutes: 45,
+    interestedIn: [],
+    temperamentPreferences: [],
+    maxDistanceMiles: 15,
+  };
+}

@@ -11,7 +11,7 @@ function DemoInner() {
   const router = useRouter();
   const params = useSearchParams();
   const preferShelter = params.get("role") === "shelter";
-  const { loginAsAlex, loginAsShelter, setBackgroundStatus, resetDemo } = useDemo();
+  const { loginAsAlex, loginAsShelter, resetDemo } = useDemo();
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-12">
@@ -31,13 +31,13 @@ function DemoInner() {
         <div className="rounded-3xl bg-white p-6 ring-1 ring-[var(--line)]">
           <h2 className="font-display text-2xl">WFH user — Alex</h2>
           <p className="mt-2 text-sm text-[var(--ink-soft)]">
-            Prefers medium / medium-energy dogs, available Tue & Thu afternoons.
+            Starts with a compatibility questionnaire, then ranked dog matches.
           </p>
           <Button
             className="mt-5 w-full"
             onClick={() => {
               loginAsAlex();
-              router.push("/dashboard");
+              router.push("/onboarding");
             }}
           >
             Log in as Alex
@@ -46,8 +46,7 @@ function DemoInner() {
             variant="secondary"
             className="mt-2 w-full"
             onClick={() => {
-              loginAsAlex();
-              setBackgroundStatus("approved");
+              loginAsAlex({ skipQuestionnaire: true });
               router.push("/discover");
             }}
           >
