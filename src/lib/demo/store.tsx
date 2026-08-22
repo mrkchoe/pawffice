@@ -359,11 +359,33 @@ export function DemoProvider({ children }: { children: ReactNode }) {
         decidedAt: skip ? new Date().toISOString() : undefined,
         notes: skip ? "Mock Checkr: clear — demo approval" : undefined,
       };
+      const completedVisit: Appointment = {
+        id: "appt-demo-luna",
+        userId: "demo-alex",
+        userName: "Alex Rivera",
+        userEmail: "alex@pawffice.demo",
+        dogId: "dog-luna",
+        shelterId: "BV-012345",
+        interactionType: "day_fostering",
+        startsAt: "2026-08-18T14:00:00.000Z",
+        endsAt: "2026-08-18T18:00:00.000Z",
+        status: "completed",
+        reviewedAt: "2026-08-18T18:15:00.000Z",
+        calendarProvider: "mock",
+        createdAt: "2026-08-20T12:00:00.000Z",
+      };
+
       const next: DemoState = {
         ...saved,
         session,
         preferences: skip ? { ...DEMO_ALEX_PREFERENCES } : null,
         backgroundCheck,
+        appointments: saved.appointments.some(
+          (appointment) =>
+            appointment.userId === "demo-alex" && appointment.status === "completed",
+        )
+          ? saved.appointments
+          : [completedVisit, ...saved.appointments.filter((appointment) => appointment.userId !== "demo-alex")],
         passedDogIds: [],
         onboarding: skip
           ? { ...defaultOnboarding(), step: "done", swipeFinished: true }

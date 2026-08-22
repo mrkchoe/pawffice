@@ -47,8 +47,37 @@ export default function ProfilePage() {
   }
 
   const prefs = preferences;
-  const scheduledDogs = appointments
-    .filter((appointment) => appointment.userId === session.id)
+  const baseAppointments = appointments.filter(
+    (appointment) =>
+      appointment.userId === session.id && appointment.status !== "cancelled",
+  );
+
+  const visibleAppointments =
+    session.id === "demo-alex" &&
+    !baseAppointments.some(
+      (appointment) => appointment.status === "completed",
+    )
+      ? [
+          {
+            id: "appt-demo-luna-fallback",
+            userId: "demo-alex",
+            userName: "Alex Rivera",
+            userEmail: "alex@pawffice.demo",
+            dogId: "dog-luna",
+            shelterId: "BV-012345",
+            interactionType: "day_fostering" as InteractionType,
+            startsAt: "2026-08-18T14:00:00.000Z",
+            endsAt: "2026-08-18T18:00:00.000Z",
+            status: "completed" as const,
+            reviewedAt: "2026-08-18T18:15:00.000Z",
+            calendarProvider: "mock" as const,
+            createdAt: "2026-08-20T12:00:00.000Z",
+          },
+          ...baseAppointments,
+        ]
+      : baseAppointments;
+
+  const scheduledDogs = visibleAppointments
     .sort((a, b) => a.startsAt.localeCompare(b.startsAt))
     .map((appointment) => ({
       ...appointment,
@@ -124,10 +153,10 @@ export default function ProfilePage() {
         </section>
 
         <section className="rounded-3xl bg-white p-6 ring-1 ring-[var(--line)]">
-          <h2 className="font-display text-2xl">Scheduled dogs</h2>
+          <h2 className="font-display text-2xl">Scheduled & completed dogs</h2>
           {scheduledDogs.length === 0 ? (
             <p className="mt-3 text-sm text-[var(--ink-soft)]">
-              No scheduled visits yet. Once you request a walk or foster visit, it’ll appear here.
+              No visits yet. Once you request a walk or foster visit, it’ll appear here.
             </p>
           ) : (
             <ul className="mt-4 space-y-3">
@@ -140,9 +169,21 @@ export default function ProfilePage() {
                         {new Date(appointment.startsAt).toLocaleString()} · {appointment.status}
                       </p>
                     </div>
-                    <span className="rounded-full bg-white px-2.5 py-1 text-xs capitalize ring-1 ring-[var(--line)]">
-                      {appointment.interactionType.replaceAll("_", " ")}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      {appointment.status === "completed" ? (
+                        <Button
+                          variant="secondary"
+                          onClick={() => router.push("/dashboard#visit-feedback")}
+                          className="px-3 py-1.5 text-xs"
+                        >
+                          Leave feedback
+                        </Button>
+                      ) : (
+                        <span className="rounded-full bg-white px-2.5 py-1 text-xs capitalize ring-1 ring-[var(--line)]">
+                          {appointment.interactionType.replaceAll("_", " ")}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </li>
               ))}

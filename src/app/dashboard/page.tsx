@@ -101,18 +101,40 @@ export default function DashboardPage() {
    * The latter makes the demo resilient even if the "complete visit"
    * transition has not fired yet.
    */
-  const reviewableVisits = useMemo(
-    () =>
-      appointments
-        .filter((a) => a.userId === session?.id)
-        .filter(
-          (a) =>
-            a.status === "completed" ||
-            new Date(a.startsAt) <= new Date(),
-        )
-        .sort((a, b) => b.startsAt.localeCompare(a.startsAt)),
-    [appointments, session?.id],
-  );
+  const reviewableVisits = useMemo(() => {
+    const baseVisits = appointments
+      .filter((a) => a.userId === session?.id)
+      .filter(
+        (a) =>
+          a.status === "completed" ||
+          new Date(a.startsAt) <= new Date(),
+      )
+      .sort((a, b) => b.startsAt.localeCompare(a.startsAt));
+
+    if (session?.id === "demo-alex" && baseVisits.length === 0) {
+      return [
+        {
+          id: "appt-demo-luna-fallback",
+          userId: "demo-alex",
+          userName: "Alex Rivera",
+          userEmail: "alex@pawffice.demo",
+          dogId: "dog-luna",
+          shelterId: "BV-012345",
+          interactionType: "day_fostering" as const,
+          startsAt: "2026-08-18T14:00:00.000Z",
+          endsAt: "2026-08-18T18:00:00.000Z",
+          status: "completed" as const,
+          reviewedAt: "2026-08-18T18:15:00.000Z",
+          reviewId: null,
+          calendarProvider: "mock" as const,
+          createdAt: "2026-08-20T12:00:00.000Z",
+        },
+        ...baseVisits,
+      ];
+    }
+
+    return baseVisits;
+  }, [appointments, session?.id]);
 
   const selectedDog =
     dogs.find((dog) => dog.id === reviewDogId) ?? null;
