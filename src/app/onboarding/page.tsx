@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AppNav } from "@/components/layout/AppNav";
 import { CompanionSwipe } from "@/components/dogs/CompanionSwipe";
+import { CompatibilityQuestionnaire } from "@/components/onboarding/CompatibilityQuestionnaire";
 import { Button } from "@/components/ui/Button";
 import { calculateDogMatch } from "@/lib/matching/calculateDogMatch";
 import { useDemo } from "@/lib/demo/store";
@@ -306,7 +307,7 @@ export default function OnboardingPage() {
                 disabled={selectedDays.length === 0}
                 onClick={() => applyWeekdayAvailability(selectedDays)}
               >
-                Continue to companion swipe
+                Continue
               </Button>
               <Button
                 variant="ghost"
@@ -317,6 +318,10 @@ export default function OnboardingPage() {
               </Button>
             </div>
           </section>
+        )}
+
+        {onboarding.step === "questionnaire" && (
+          <CompatibilityQuestionnaire />
         )}
 
         {onboarding.step === "swipe" && (

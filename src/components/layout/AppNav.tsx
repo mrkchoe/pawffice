@@ -22,7 +22,13 @@ export function AppNav() {
     <header className="sticky top-0 z-40 border-b border-[var(--line)]/80 bg-[var(--bg)]/85 backdrop-blur-md">
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3">
         <Link
-          href={session?.role === "shelter" ? "/shelter/dashboard" : "/"}
+          href={
+            session?.role === "shelter"
+              ? "/shelter/dashboard"
+              : session
+                ? "/discover"
+                : "/"
+          }
           className="flex items-center gap-2"
         >
           <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[var(--brand)] shadow-sm">
