@@ -50,7 +50,7 @@ function emptyState(): DemoState {
     activity: [],
     passedDogIds: [],
     calendarMode: "mock",
-    onboarding: defaultOnboarding(),
+    liabilityWaiver: null,
   };
 }
 
@@ -77,7 +77,7 @@ function loadState(): DemoState {
 
 type DemoContextValue = DemoState & {
   hydrated: boolean;
-  loginAsAlex: () => void;
+  loginAsAlex: (opts?: { skipQuestionnaire?: boolean }) => void;
   loginAsShelter: () => void;
   logout: () => void;
   resetDemo: () => void;
@@ -145,7 +145,7 @@ export function DemoProvider({ children }: { children: ReactNode }) {
     setState((s) => ({ ...s, activity: [item, ...s.activity].slice(0, 20) }));
   }, [state.session?.id]);
 
-  const loginAsAlex = useCallback(() => {
+  const loginAsAlex = useCallback((opts?: { skipQuestionnaire?: boolean }) => {
     const session: Profile = {
       id: "demo-alex",
       role: "wfh",
@@ -154,15 +154,19 @@ export function DemoProvider({ children }: { children: ReactNode }) {
       location: "San Francisco, CA",
       createdAt: new Date().toISOString(),
     };
+    const skip = Boolean(opts?.skipQuestionnaire);
     const backgroundCheck: BackgroundCheck = {
       userId: session.id,
-      status: "not_started",
+      status: skip ? "approved" : "not_started",
       provider: "mock_checkr",
+      submittedAt: skip ? new Date().toISOString() : undefined,
+      decidedAt: skip ? new Date().toISOString() : undefined,
+      notes: skip ? "Mock Checkr: clear — demo approval" : undefined,
     };
     setState((s) => ({
       ...s,
       session,
-      preferences: { ...DEMO_ALEX_PREFERENCES },
+      preferences: skip ? { ...DEMO_ALEX_PREFERENCES } : null,
       backgroundCheck,
       passedDogIds: [],
       onboarding: defaultOnboarding(),
@@ -170,7 +174,9 @@ export function DemoProvider({ children }: { children: ReactNode }) {
         {
           id: `act-${Date.now()}`,
           userId: session.id,
-          message: "Signed in as Alex (demo WFH user)",
+          message: skip
+            ? "Signed in as Alex with approved background check"
+            : "Signed in as Alex (demo WFH user)",
           createdAt: new Date().toISOString(),
         },
         ...s.activity,

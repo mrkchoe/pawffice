@@ -2,34 +2,35 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { CalendarDays, Compass, Heart, PawPrint, UserRound } from "lucide-react";
+import { Compass, Heart, PawPrint } from "@phosphor-icons/react";
 import clsx from "clsx";
 import { useDemo } from "@/lib/demo/store";
 
 const links = [
   { href: "/discover", label: "Discover Dogs", icon: Compass },
   { href: "/matches", label: "Matches", icon: Heart },
-  { href: "/schedule", label: "Schedule", icon: CalendarDays },
-  { href: "/profile", label: "Profile", icon: UserRound },
 ];
+
+const ICON_ON_BRAND = "#feffff";
 
 export function AppNav() {
   const pathname = usePathname();
-  const { session, logout } = useDemo();
+  const { session, preferences, logout } = useDemo();
+  const wfhReady = session?.role === "wfh" && Boolean(preferences);
 
   return (
     <header className="sticky top-0 z-40 border-b border-[var(--line)]/80 bg-[var(--bg)]/85 backdrop-blur-md">
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3">
         <Link href="/" className="flex items-center gap-2">
-          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[var(--brand)] text-white shadow-sm">
-            <PawPrint className="h-5 w-5" />
+          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[var(--brand)] shadow-sm">
+            <PawPrint size={20} color={ICON_ON_BRAND} weight="fill" />
           </span>
           <span className="font-display text-xl tracking-tight text-[var(--ink)]">
             Pawffice
           </span>
         </Link>
 
-        {session?.role === "wfh" && (
+        {wfhReady && (
           <nav className="hidden items-center gap-1 md:flex">
             {links.map(({ href, label, icon: Icon }) => {
               const active = pathname.startsWith(href);
@@ -44,7 +45,11 @@ export function AppNav() {
                       : "text-[var(--ink-soft)] hover:bg-white/70 hover:text-[var(--ink)]",
                   )}
                 >
-                  <Icon className="h-4 w-4" />
+                  <Icon
+                    size={16}
+                    weight="fill"
+                    color={active ? ICON_ON_BRAND : "currentColor"}
+                  />
                   {label}
                 </Link>
               );
@@ -72,7 +77,13 @@ export function AppNav() {
           {session ? (
             <>
               <Link
-                href={session.role === "shelter" ? "/shelter/dashboard" : "/dashboard"}
+                href={
+                  session.role === "shelter"
+                    ? "/shelter/dashboard"
+                    : preferences
+                      ? "/dashboard"
+                      : "/onboarding"
+                }
                 className="hidden text-sm text-[var(--ink-soft)] sm:inline"
               >
                 {session.name}
@@ -96,7 +107,7 @@ export function AppNav() {
         </div>
       </div>
 
-      {session?.role === "wfh" && (
+      {wfhReady && (
         <nav className="flex gap-1 overflow-x-auto border-t border-[var(--line)]/60 px-2 py-2 md:hidden">
           {links.map(({ href, label, icon: Icon }) => {
             const active = pathname.startsWith(href);
@@ -111,7 +122,11 @@ export function AppNav() {
                     : "bg-white/60 text-[var(--ink-soft)]",
                 )}
               >
-                <Icon className="h-3.5 w-3.5" />
+                <Icon
+                  size={14}
+                  weight="fill"
+                  color={active ? ICON_ON_BRAND : "currentColor"}
+                />
                 {label}
               </Link>
             );

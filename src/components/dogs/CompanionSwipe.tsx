@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import Image from "next/image";
 import { motion, useMotionValue, useTransform, type PanInfo } from "framer-motion";
-import { Heart, X } from "lucide-react";
+import { Heart, X } from "@phosphor-icons/react";
 import type { Dog, MatchResult } from "@/lib/types";
 import { Button } from "@/components/ui/Button";
 
@@ -135,7 +135,7 @@ export function CompanionSwipe({
           }}
           aria-label="Pass"
         >
-          <X className="h-6 w-6" />
+          <X size={24} weight="fill" color="currentColor" />
         </Button>
         <Button
           className="h-14 w-14 rounded-full p-0"
@@ -145,7 +145,7 @@ export function CompanionSwipe({
           }}
           aria-label="Save companion"
         >
-          <Heart className="h-6 w-6 fill-current" />
+          <Heart size={24} weight="fill" color="#feffff" />
         </Button>
       </div>
     </div>

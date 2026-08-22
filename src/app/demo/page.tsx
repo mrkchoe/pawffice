@@ -37,15 +37,24 @@ function DemoInner() {
         <div className="rounded-3xl bg-white p-6 ring-1 ring-[var(--line)]">
           <h2 className="font-display text-2xl">WFH user — Alex</h2>
           <p className="mt-2 text-sm text-[var(--ink-soft)]">
-            Starts the dog-in-mind / availability / swipe onboarding flow.
+            Starts with a compatibility questionnaire, then ranked dog matches.
           </p>
-          <Button className="mt-5 w-full" onClick={() => startAsAlex(false)}>
+          <Button
+            className="mt-5 w-full"
+            onClick={() => {
+              loginAsAlex();
+              router.push("/onboarding");
+            }}
+          >
             Log in as Alex
           </Button>
           <Button
             variant="secondary"
             className="mt-2 w-full"
-            onClick={() => startAsAlex(true)}
+            onClick={() => {
+              loginAsAlex({ skipQuestionnaire: true });
+              router.push("/discover");
+            }}
           >
             Alex + auto-approve background check
           </Button>

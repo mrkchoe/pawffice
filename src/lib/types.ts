@@ -12,6 +12,8 @@ export type InteractionType =
   | "trial_adoption"
   | "adoption";
 
+export type GoodWithNeed = "kids" | "cats" | "strangers";
+
 export type BackgroundCheckStatus =
   | "not_started"
   | "pending"
@@ -66,6 +68,7 @@ export interface UserPreferences {
   maxExerciseMinutes: number;
   interestedIn: InteractionType[];
   temperamentPreferences: string[];
+  mustBeGoodWith: GoodWithNeed[];
   maxDistanceMiles: number;
 }
 
@@ -76,6 +79,11 @@ export interface BackgroundCheck {
   submittedAt?: string;
   decidedAt?: string;
   notes?: string;
+}
+
+export interface LiabilityWaiver {
+  signedName: string;
+  acceptedAt: string;
 }
 
 export interface Shelter {
@@ -111,6 +119,7 @@ export interface Dog {
   goodWithDogs: boolean;
   goodWithCats: boolean;
   goodWithChildren: boolean;
+  goodWithStrangers: boolean;
   specialNeeds: string | null;
   interactionTypes: InteractionType[];
   availability: DayAvailability[];
@@ -187,5 +196,5 @@ export interface DemoState {
   activity: ActivityItem[];
   passedDogIds: string[];
   calendarMode: "mock" | "arcade";
-  onboarding: OnboardingState;
+  liabilityWaiver: LiabilityWaiver | null;
 }

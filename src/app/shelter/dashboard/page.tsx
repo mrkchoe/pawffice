@@ -227,6 +227,7 @@ export default function ShelterDashboardPage() {
       goodWithDogs: true,
       goodWithCats: true,
       goodWithChildren: true,
+      goodWithStrangers: true,
       specialNeeds: null,
       interactionTypes: ["day_fostering", "dog_walking"],
       availability: primaryShelter?.availability ?? [],
