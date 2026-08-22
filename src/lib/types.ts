@@ -90,6 +90,25 @@ export interface Shelter {
   ownerUserId: string;
 }
 
+export interface DogReviewSummary {
+  averageRating: number;
+  reviewCount: number;
+  behaviorTags: string[];
+  recentNote: string | null;
+}
+
+export interface DogReview {
+  id: string;
+  userId: string;
+  dogId: string;
+  shelterId: string;
+  appointmentId?: string;
+  rating: 1 | 2 | 3 | 4 | 5;
+  behaviorNotes: string;
+  behaviorTags: string[];
+  createdAt: string;
+}
+
 export interface Dog {
   id: string;
   shelterId: string;
@@ -111,6 +130,7 @@ export interface Dog {
   availability: DayAvailability[];
   location: string;
   distanceMiles: number;
+  reviewSummary?: DogReviewSummary;
 }
 
 export interface SavedDog {
@@ -131,6 +151,8 @@ export interface Appointment {
   calendarEventId?: string;
   calendarProvider: "mock" | "arcade";
   notes?: string;
+  reviewId?: string;
+  reviewedAt?: string;
   createdAt: string;
 }
 
@@ -161,6 +183,7 @@ export interface DemoState {
   dogs: Dog[];
   savedDogs: SavedDog[];
   appointments: Appointment[];
+  dogReviews: DogReview[];
   activity: ActivityItem[];
   passedDogIds: string[];
   calendarMode: "mock" | "arcade";

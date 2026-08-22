@@ -18,6 +18,7 @@ function ScheduleInner() {
     backgroundCheck,
     appointments,
     addAppointment,
+    completeAppointment,
     calendarMode,
     setCalendarMode,
   } = useDemo();
@@ -111,9 +112,19 @@ function ScheduleInner() {
         }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Booking failed");
+      if (!res.ok) {
+        if (data.authUrl) {
+          const popup = window.open(data.authUrl, "_blank", "noopener,noreferrer");
+          if (!popup) {
+            window.location.href = data.authUrl;
+          }
+          setMessage("Arcade needs Google Calendar permission. Please approve access in the window that opens.");
+          return;
+        }
+        throw new Error(data.error || "Booking failed");
+      }
 
-      addAppointment({
+      const booked = addAppointment({
         userId: session.id,
         dogId: dog.id,
         shelterId: shelter.id,
@@ -125,6 +136,10 @@ function ScheduleInner() {
         calendarProvider: data.event.provider,
         notes: data.event.title,
       });
+
+      if (session.id === "demo-alex") {
+        window.setTimeout(() => completeAppointment(booked.id), 2500);
+      }
 
       setMessage(`Booked! Calendar event created via ${data.event.provider}.`);
       router.push("/dashboard");

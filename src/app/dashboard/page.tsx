@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { AppNav } from "@/components/layout/AppNav";
 import { DogCard } from "@/components/dogs/DogCard";
@@ -9,6 +9,18 @@ import { calculateDogMatch } from "@/lib/matching/calculateDogMatch";
 import { interactionLabel, useDemo } from "@/lib/demo/store";
 import { DEMO_ALEX_PREFERENCES } from "@/data/seed";
 import { useRouter } from "next/navigation";
+
+const behaviorOptions = [
+  "gentle",
+  "friendly",
+  "curious",
+  "calm",
+  "playful",
+  "responsive",
+  "shy",
+  "anxious",
+  "leash-pulling",
+];
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -20,10 +32,20 @@ export default function DashboardPage() {
     savedDogs,
     appointments,
     activity,
+    dogReviews,
     setBackgroundStatus,
+    submitDogReview,
   } = useDemo();
 
   const prefs = preferences ?? DEMO_ALEX_PREFERENCES;
+  const feedbackSectionRef = useRef<HTMLElement | null>(null);
+  const feedbackFormRef = useRef<HTMLDivElement | null>(null);
+  const [reviewDogId, setReviewDogId] = useState<string | null>(null);
+  const [reviewAppointmentId, setReviewAppointmentId] = useState<string | null>(null);
+  const [reviewRating, setReviewRating] = useState<1 | 2 | 3 | 4 | 5>(5);
+  const [reviewNotes, setReviewNotes] = useState("");
+  const [reviewTags, setReviewTags] = useState<string[]>([]);
+  const [selectedReviewId, setSelectedReviewId] = useState<string | null>(null);
 
   const topMatches = useMemo(
     () =>
@@ -51,6 +73,81 @@ export default function DashboardPage() {
         .slice(0, 3),
     [appointments, session?.id],
   );
+
+  const reviewableVisits = useMemo(
+    () =>
+      appointments
+        .filter((a) => a.userId === session?.id)
+        .filter(
+          (a) =>
+            a.status === "completed" ||
+            new Date(a.startsAt) <= new Date(),
+        )
+        .sort((a, b) => b.startsAt.localeCompare(a.startsAt)),
+    [appointments, session?.id],
+  );
+
+  const selectedDog = dogs.find((dog) => dog.id === reviewDogId) ?? null;
+  const selectedReview =
+    selectedReviewId !== null
+      ? dogReviews.find((review) => review.id === selectedReviewId) ?? null
+      : null;
+
+  useEffect(() => {
+    if (!selectedDog || !feedbackFormRef.current) return;
+    feedbackFormRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [selectedDog]);
+
+  useEffect(() => {
+    const unreviewedCompleted = reviewableVisits.find(
+      (appointment) => appointment.status === "completed" && !appointment.reviewId,
+    );
+
+    if (!unreviewedCompleted || selectedDog) return;
+    const reviewMatch = dogReviews.find(
+      (review) => review.appointmentId === unreviewedCompleted.id,
+    );
+
+    if (reviewMatch) return;
+    feedbackSectionRef.current?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
+    openReview(unreviewedCompleted.dogId, unreviewedCompleted.id);
+  }, [dogReviews, reviewableVisits, selectedDog]);
+
+  function openReview(
+    dogId: string,
+    appointmentId: string,
+    existingReview?: { id: string; rating: 1 | 2 | 3 | 4 | 5; behaviorNotes: string; behaviorTags: string[] },
+  ) {
+    const dog = dogs.find((item) => item.id === dogId);
+    setReviewDogId(dogId);
+    setReviewAppointmentId(appointmentId);
+    setSelectedReviewId(existingReview?.id ?? null);
+    setReviewRating(existingReview?.rating ?? 5);
+    setReviewNotes(existingReview?.behaviorNotes ?? "");
+    setReviewTags(existingReview?.behaviorTags ?? dog?.reviewSummary?.behaviorTags?.slice(0, 2) ?? []);
+  }
+
+  function cancelReview() {
+    setReviewDogId(null);
+    setReviewAppointmentId(null);
+    setReviewNotes("");
+    setReviewRating(5);
+    setReviewTags([]);
+    setSelectedReviewId(null);
+  }
+
+  function submitReview() {
+    if (!reviewDogId || !reviewAppointmentId) return;
+    submitDogReview(reviewDogId, reviewAppointmentId, {
+      rating: reviewRating,
+      behaviorNotes: reviewNotes.trim(),
+      behaviorTags: reviewTags,
+    });
+    cancelReview();
+  }
 
   if (!session) {
     return (
@@ -162,6 +259,150 @@ export default function DashboardPage() {
             </ul>
           </section>
         </div>
+
+        <section
+          id="visit-feedback"
+          ref={feedbackSectionRef}
+          className="mt-10 rounded-3xl bg-white p-6 ring-1 ring-[var(--line)]"
+        >
+          <h2 className="font-display text-2xl">Dog visit feedback</h2>
+          {reviewableVisits.length === 0 ? (
+            <p className="mt-3 text-sm text-[var(--ink-soft)]">
+              Your past dog visits will show up here once you meet a pup.
+            </p>
+          ) : (
+            <ul className="mt-4 space-y-3">
+              {reviewableVisits.map((appointment) => {
+                const dog = dogs.find((item) => item.id === appointment.dogId);
+                return (
+                  <li
+                    key={appointment.id}
+                    className="flex flex-col gap-3 rounded-2xl border border-[var(--line)] bg-[var(--bg)] p-4 sm:flex-row sm:items-center sm:justify-between"
+                  >
+                    <div>
+                      <p className="font-medium text-[var(--ink)]">
+                        {dog?.name ?? "Dog"}
+                      </p>
+                      <p className="text-sm text-[var(--ink-soft)]">
+                        {new Date(appointment.startsAt).toLocaleString()} ·{" "}
+                        {interactionLabel(appointment.interactionType)}
+                      </p>
+                    </div>
+                    {appointment.status === "completed" ? (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          openReview(
+                            appointment.dogId,
+                            appointment.id,
+                            dogReviews.find(
+                              (review) =>
+                                review.appointmentId === appointment.id &&
+                                review.userId === session.id,
+                            ) ?? undefined,
+                          )
+                        }
+                        className="text-sm font-medium text-[var(--brand)] underline-offset-2 hover:underline"
+                      >
+                        {appointment.reviewId || dogReviews.some(
+                          (review) =>
+                            review.appointmentId === appointment.id &&
+                            review.userId === session.id,
+                        )
+                          ? `Reviewed · ${dog?.reviewSummary?.averageRating ?? "—"}/5`
+                          : "Leave feedback"}
+                      </button>
+                    ) : (
+                      <Button
+                        variant="secondary"
+                        onClick={() => openReview(appointment.dogId, appointment.id)}
+                      >
+                        Review visit
+                      </Button>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+
+          {selectedDog && (
+            <div
+              ref={feedbackFormRef}
+              className="mt-6 rounded-2xl bg-[var(--bg-deep)] p-5 ring-1 ring-[var(--line)]"
+            >
+              <h3 className="font-display text-xl">
+                {selectedReview ? "Your feedback for " : "How did "}
+                {selectedDog.name}
+                {selectedReview ? "" : " do?"}
+              </h3>
+              <div className="mt-4 flex flex-wrap gap-2">
+                {[1, 2, 3, 4, 5].map((value) => (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => setReviewRating(value as 1 | 2 | 3 | 4 | 5)}
+                    className={`rounded-full px-3 py-1.5 text-sm ring-1 ${
+                      reviewRating === value
+                        ? "bg-[var(--brand)] text-white ring-[var(--brand)]"
+                        : "bg-white text-[var(--ink)] ring-[var(--line)]"
+                    }`}
+                  >
+                    {value}★
+                  </button>
+                ))}
+              </div>
+
+              <div className="mt-4">
+                <p className="text-sm font-medium text-[var(--ink)]">
+                  Behavior notes
+                </p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {behaviorOptions.map((tag) => {
+                    const active = reviewTags.includes(tag);
+                    return (
+                      <button
+                        key={tag}
+                        type="button"
+                        onClick={() =>
+                          setReviewTags((current) =>
+                            active
+                              ? current.filter((item) => item !== tag)
+                              : [...current, tag],
+                          )
+                        }
+                        className={`rounded-full px-3 py-1 text-xs transition ${
+                          active
+                            ? "bg-[var(--accent-soft)] text-[var(--ink)] ring-1 ring-[var(--brand)]"
+                            : "bg-white text-[var(--ink-soft)] ring-1 ring-[var(--line)]"
+                        }`}
+                      >
+                        {tag}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <textarea
+                value={reviewNotes}
+                onChange={(event) => setReviewNotes(event.target.value)}
+                rows={4}
+                className="mt-4 w-full rounded-2xl border border-[var(--line)] bg-white p-3 text-sm text-[var(--ink)] outline-none focus:border-[var(--brand)]"
+                placeholder="Share what the dog did well, any triggers, or how they behaved during the visit."
+              />
+
+              <div className="mt-4 flex gap-3">
+                <Button onClick={submitReview}>
+                  {selectedReview ? "Update review" : "Save review"}
+                </Button>
+                <Button variant="secondary" onClick={cancelReview}>
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          )}
+        </section>
       </div>
     </div>
   );
