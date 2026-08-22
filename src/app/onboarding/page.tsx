@@ -95,6 +95,16 @@ export default function OnboardingPage() {
     );
   }
 
+  // New accounts fill the questionnaire before dog-in-mind / swipe.
+  if (!preferences && onboarding.step === "ask") {
+    return (
+      <div className="min-h-screen pb-16">
+        <AppNav />
+        <CompatibilityQuestionnaire />
+      </div>
+    );
+  }
+
   if (onboarding.step === "done") {
     return (
       <div className="min-h-screen">

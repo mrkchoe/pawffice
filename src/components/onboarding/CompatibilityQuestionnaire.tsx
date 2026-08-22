@@ -125,8 +125,8 @@ export function CompatibilityQuestionnaire() {
       userId: session?.id ?? draft.userId,
     });
     if (submitCheck) setBackgroundStatus("pending");
-    setOnboardingStep("done");
-    router.push("/discover");
+    // Stay in onboarding so the dog-in-mind / availability flow can run next.
+    router.push("/onboarding");
   }
 
   function onAnimalSearch(e: FormEvent) {
