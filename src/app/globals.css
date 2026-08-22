@@ -22,8 +22,8 @@
   --color-brand-deep: var(--brand-deep);
   --color-accent: var(--accent);
   --color-line: var(--line);
-  --font-sans: var(--font-outfit);
-  --font-display: var(--font-fraunces);
+  --font-sans: var(--font-nunito);
+  --font-display: var(--font-nunito);
 }
 
 body {
@@ -32,7 +32,7 @@ body {
     radial-gradient(900px 500px at 100% 0%, #fde8c8 0%, transparent 45%),
     linear-gradient(180deg, var(--bg) 0%, var(--bg-deep) 100%);
   color: var(--ink);
-  font-family: var(--font-outfit), system-ui, sans-serif;
+  font-family: var(--font-nunito), system-ui, sans-serif;
   min-height: 100vh;
 }
 
@@ -40,7 +40,9 @@ h1,
 h2,
 h3,
 .font-display {
-  font-family: var(--font-fraunces), Georgia, serif;
+  font-family: var(--font-nunito), system-ui, sans-serif;
+  font-weight: 700;
+  letter-spacing: -0.02em;
 }
 
 @keyframes float-soft {

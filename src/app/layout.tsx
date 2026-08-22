@@ -1,16 +1,14 @@
 import type { Metadata } from "next";
-import { Fraunces, Outfit } from "next/font/google";
+import { Nunito } from "next/font/google";
+import { PhosphorProvider } from "@/components/icons/PhosphorProvider";
 import { DemoProvider } from "@/lib/demo/store";
 import "./globals.css";
 
-const outfit = Outfit({
-  variable: "--font-outfit",
+/** Rounded sans-serif for body and titles. */
+const nunito = Nunito({
+  variable: "--font-nunito",
   subsets: ["latin"],
-});
-
-const fraunces = Fraunces({
-  variable: "--font-fraunces",
-  subsets: ["latin"],
+  weight: ["400", "500", "600", "700", "800"],
 });
 
 export const metadata: Metadata = {
@@ -25,9 +23,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${outfit.variable} ${fraunces.variable} h-full`}>
+    <html lang="en" className={`${nunito.variable} h-full`}>
       <body className="min-h-full flex flex-col antialiased">
-        <DemoProvider>{children}</DemoProvider>
+        <PhosphorProvider>
+          <DemoProvider>{children}</DemoProvider>
+        </PhosphorProvider>
       </body>
     </html>
   );

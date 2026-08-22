@@ -2,7 +2,7 @@
 
 import { useMemo, useState, type FormEvent, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { Dog, Search } from "lucide-react";
+import { Dog, MagnifyingGlass } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/Button";
 import { blankUserPreferences } from "@/data/seed";
 import { useDemo } from "@/lib/demo/store";
@@ -134,8 +134,11 @@ export function CompatibilityQuestionnaire() {
           Search by animal ID or name
         </label>
         <div className="relative">
-          <Search
-            className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--ink-soft)]"
+          <MagnifyingGlass
+            className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[var(--ink-soft)]"
+            size={16}
+            weight="fill"
+            color="currentColor"
             aria-hidden
           />
           <input
@@ -471,7 +474,12 @@ function SizeTile({
           : "bg-[var(--bg-deep)] text-[var(--ink)] ring-transparent hover:ring-[var(--brand)]"
       }`}
     >
-      <Dog className={`${iconClass} mb-1`} strokeWidth={1.75} aria-hidden />
+      <Dog
+        className={`${iconClass} mb-1`}
+        weight="fill"
+        color="currentColor"
+        aria-hidden
+      />
       <span className="font-display text-base leading-tight">{label}</span>
       <span
         className={`text-[0.7rem] leading-tight ${
