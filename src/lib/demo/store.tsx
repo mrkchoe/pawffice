@@ -10,7 +10,14 @@ import {
   useSyncExternalStore,
   type ReactNode,
 } from "react";
-import { DEMO_ALEX_PREFERENCES, DEMO_DOGS, DEMO_SHELTERS, WEEKDAY_9_TO_3, blankUserPreferences } from "@/data/seed";
+import {
+  DEMO_ALEX_PREFERENCES,
+  DEMO_APPOINTMENTS,
+  DEMO_DOGS,
+  DEMO_SHELTERS,
+  LEGACY_SHELTER_IDS,
+  WEEKDAY_9_TO_3,
+} from "@/data/seed";
 import type {
   ActivityItem,
   Appointment,
@@ -46,12 +53,40 @@ function emptyState(): DemoState {
     shelters: DEMO_SHELTERS,
     dogs: DEMO_DOGS,
     savedDogs: [],
-    appointments: [],
+    appointments: DEMO_APPOINTMENTS,
     activity: [],
     passedDogIds: [],
     calendarMode: "mock",
     liabilityWaiver: null,
     onboarding: defaultOnboarding(),
+  };
+}
+
+function migrateShelterId(id: string): string {
+  return LEGACY_SHELTER_IDS[id] ?? id;
+}
+
+function normalizeDog(dog: Dog): Dog {
+  return {
+    ...dog,
+    shelterId: migrateShelterId(dog.shelterId),
+    rating: typeof dog.rating === "number" ? dog.rating : 4.5,
+    shelterNotes: dog.shelterNotes ?? "",
+    experienceLog: dog.experienceLog ?? [],
+  };
+}
+
+function normalizeShelter(shelter: Shelter): Shelter {
+  return {
+    ...shelter,
+    id: migrateShelterId(shelter.id),
+  };
+}
+
+function normalizeAppointment(appt: Appointment): Appointment {
+  return {
+    ...appt,
+    shelterId: migrateShelterId(appt.shelterId),
   };
 }
 
@@ -61,15 +96,21 @@ function loadState(): DemoState {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return emptyState();
     const parsed = JSON.parse(raw) as Partial<DemoState>;
+    const base = emptyState();
     return {
-      ...emptyState(),
+      ...base,
       ...parsed,
       onboarding: {
         ...defaultOnboarding(),
         ...(parsed.onboarding ?? {}),
       },
-      dogs: parsed.dogs?.length ? parsed.dogs : DEMO_DOGS,
-      shelters: parsed.shelters?.length ? parsed.shelters : DEMO_SHELTERS,
+      dogs: (parsed.dogs ?? base.dogs).map(normalizeDog),
+      shelters: (parsed.shelters ?? base.shelters).map(normalizeShelter),
+      appointments: (
+        parsed.appointments?.length
+          ? parsed.appointments
+          : DEMO_APPOINTMENTS
+      ).map(normalizeAppointment),
     };
   } catch {
     return emptyState();
