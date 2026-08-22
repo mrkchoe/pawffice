@@ -12,6 +12,8 @@ export type InteractionType =
   | "trial_adoption"
   | "adoption";
 
+export type GoodWithNeed = "kids" | "cats" | "strangers";
+
 export type BackgroundCheckStatus =
   | "not_started"
   | "pending"
@@ -66,6 +68,7 @@ export interface UserPreferences {
   maxExerciseMinutes: number;
   interestedIn: InteractionType[];
   temperamentPreferences: string[];
+  mustBeGoodWith: GoodWithNeed[];
   maxDistanceMiles: number;
 }
 
@@ -78,10 +81,20 @@ export interface BackgroundCheck {
   notes?: string;
 }
 
+export interface LiabilityWaiver {
+  signedName: string;
+  acceptedAt: string;
+}
+
 export interface Shelter {
   id: string;
   name: string;
   email: string;
+  /**
+   * Arcade.dev user_id for this shelter's Google Calendar / Gmail.
+   * Must match the email of the signed-in Arcade account (not a fake demo address).
+   */
+  arcadeUserId?: string;
   phone: string;
   address: string;
   city: string;
@@ -125,12 +138,31 @@ export interface Dog {
   goodWithDogs: boolean;
   goodWithCats: boolean;
   goodWithChildren: boolean;
+  goodWithStrangers: boolean;
   specialNeeds: string | null;
   interactionTypes: InteractionType[];
   availability: DayAvailability[];
   location: string;
   distanceMiles: number;
+  /** Demo companion rating out of 5. */
+  rating: number;
+  /** Freeform internal notes — never shown to WFH users. */
+  shelterNotes: string;
+  /** Past visits and companion experience reviews — shelter-only. */
+  experienceLog: DogExperienceEntry[];
+  /** Aggregated from WFH-user-submitted DogReviews (post-visit feedback). */
   reviewSummary?: DogReviewSummary;
+}
+
+/** Shelter-only history attached to a dog profile. */
+export interface DogExperienceEntry {
+  id: string;
+  kind: "visit" | "review";
+  at: string;
+  visitorName: string;
+  interactionType?: InteractionType;
+  rating?: number;
+  summary: string;
 }
 
 export interface SavedDog {
@@ -142,14 +174,17 @@ export interface SavedDog {
 export interface Appointment {
   id: string;
   userId: string;
+  userName: string;
+  userEmail: string;
   dogId: string;
   shelterId: string;
   interactionType: InteractionType;
   startsAt: string;
   endsAt: string;
-  status: "scheduled" | "completed" | "cancelled";
+  status: "pending" | "approved" | "scheduled" | "rejected" | "completed" | "cancelled";
   calendarEventId?: string;
   calendarProvider: "mock" | "arcade";
+  emailId?: string;
   notes?: string;
   reviewId?: string;
   reviewedAt?: string;
@@ -175,6 +210,22 @@ export interface SuggestedSlot {
   source: "mock" | "arcade";
 }
 
+export type OnboardingStep =
+  | "ask"
+  | "pick_dog"
+  | "around_dog"
+  | "availability"
+  | "questionnaire"
+  | "swipe"
+  | "done";
+
+export interface OnboardingState {
+  step: OnboardingStep;
+  chosenDogId: string | null;
+  /** True after the user finishes the required companion swipe deck. */
+  swipeFinished: boolean;
+}
+
 export interface DemoState {
   session: Profile | null;
   preferences: UserPreferences | null;
@@ -187,4 +238,6 @@ export interface DemoState {
   activity: ActivityItem[];
   passedDogIds: string[];
   calendarMode: "mock" | "arcade";
+  liabilityWaiver: LiabilityWaiver | null;
+  onboarding: OnboardingState;
 }

@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { Heart } from "lucide-react";
+import { Heart } from "@phosphor-icons/react";
 import type { Dog, MatchResult } from "@/lib/types";
 
 export function DogCard({
@@ -26,7 +26,7 @@ export function DogCard({
           alt={dog.name}
           fill
           className="object-cover transition duration-500 group-hover:scale-105"
-          sizes="(max-width:768px) 100vw, 33vw"
+          sizes="(max-width:640px) 100vw, (max-width:1024px) 50vw, 25vw"
         />
         <div className="absolute left-3 top-3 rounded-full bg-[var(--brand)] px-3 py-1 text-sm font-semibold text-white shadow">
           {match.score}% match
@@ -40,7 +40,12 @@ export function DogCard({
               {dog.ageYears} yrs · {dog.breed}
             </p>
           </div>
-          <Heart className="mt-1 h-4 w-4 text-[var(--brand)] opacity-70" />
+          <Heart
+            className="mt-1 opacity-70"
+            size={16}
+            weight="fill"
+            color="var(--brand)"
+          />
         </div>
         <div className="flex flex-wrap gap-2 text-xs">
           <span className="rounded-full bg-[var(--bg-deep)] px-2.5 py-1 capitalize">
