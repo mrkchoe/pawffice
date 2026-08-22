@@ -41,15 +41,22 @@ export default function DogDetailPage() {
   return (
     <div className="min-h-screen pb-16">
       <AppNav />
-      <div className="mx-auto grid max-w-6xl gap-8 px-4 py-8 lg:grid-cols-2">
-        <div className="relative aspect-[4/5] overflow-hidden rounded-[2rem] shadow-xl">
-          <Image src={dog.photoUrl} alt={dog.name} fill className="object-cover" priority />
+      <div className="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-8 md:flex-row md:items-start md:gap-8">
+        <div className="relative mx-auto aspect-[4/5] w-1/2 shrink-0 overflow-hidden rounded-[1.5rem] shadow-xl md:mx-0 md:w-[25%] md:max-w-[14rem]">
+          <Image
+            src={dog.photoUrl}
+            alt={dog.name}
+            fill
+            className="object-cover"
+            priority
+            sizes="(max-width: 768px) 50vw, 25vw"
+          />
         </div>
-        <div>
+        <div className="min-w-0 flex-1">
           <p className="text-sm font-medium text-[var(--brand)]">
             {match.score}% Match
           </p>
-          <h1 className="font-display text-5xl">{dog.name}</h1>
+          <h1 className="font-display text-4xl md:text-5xl">{dog.name}</h1>
           <p className="mt-2 text-lg text-[var(--ink-soft)]">
             {dog.ageYears} years · {dog.breed} · {dog.sex} · {dog.location}
           </p>
@@ -75,6 +82,7 @@ export default function DogDetailPage() {
             <Info label="Energy" value={dog.energyLevel} />
             <Info label="Exercise" value={`${dog.exerciseMinutes} min / day`} />
             <Info label="Shelter" value={shelter?.name ?? "—"} />
+            <Info label="Shelter ID" value={dog.shelterId} />
             <Info
               label="Good with"
               value={[

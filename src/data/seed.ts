@@ -23,7 +23,7 @@ const weekendHeavy: DayAvailability[] = [
 
 export const DEMO_SHELTERS: Shelter[] = [
   {
-    id: "shelter-bayview",
+    id: "BV-012345",
     name: "Bayview Animal Friends",
     email: "hello@bayviewfriends.demo",
     phone: "(415) 555-0142",
@@ -35,7 +35,7 @@ export const DEMO_SHELTERS: Shelter[] = [
     ownerUserId: "demo-shelter",
   },
   {
-    id: "shelter-oakridge",
+    id: "OR-067891",
     name: "Oakridge Rescue Collective",
     email: "visits@oakridgerescue.demo",
     phone: "(510) 555-0198",
@@ -48,11 +48,16 @@ export const DEMO_SHELTERS: Shelter[] = [
   },
 ];
 
+/** Maps legacy demo shelter keys to the XX-###### ID format (e.g. AB-012345). */
+export const LEGACY_SHELTER_IDS: Record<string, string> = {
+  "shelter-bayview": "BV-012345",
+  "shelter-oakridge": "OR-067891",
+};
 /** Visually distinct Unsplash dog photos for the demo. */
 const DEMO_DOGS_BASE = [
   {
     id: "dog-luna",
-    shelterId: "shelter-bayview",
+    shelterId: "BV-012345",
     name: "Luna",
     photoUrl:
       "https://images.unsplash.com/photo-1587300003388-59208cc962cb?w=800&h=1000&fit=crop",
@@ -77,7 +82,7 @@ const DEMO_DOGS_BASE = [
   },
   {
     id: "dog-milo",
-    shelterId: "shelter-oakridge",
+    shelterId: "OR-067891",
     name: "Milo",
     photoUrl:
       "https://images.unsplash.com/photo-1552053831-71594a27632d?w=800&h=1000&fit=crop",
@@ -102,7 +107,7 @@ const DEMO_DOGS_BASE = [
   },
   {
     id: "dog-biscuit",
-    shelterId: "shelter-bayview",
+    shelterId: "BV-012345",
     name: "Biscuit",
     photoUrl:
       "https://images.unsplash.com/photo-1537151608828-ea2b11777ee8?w=800&h=1000&fit=crop",
@@ -127,7 +132,7 @@ const DEMO_DOGS_BASE = [
   },
   {
     id: "dog-nova",
-    shelterId: "shelter-oakridge",
+    shelterId: "OR-067891",
     name: "Nova",
     photoUrl:
       "https://images.unsplash.com/photo-1518717758536-85ae29035b6d?w=800&h=1000&fit=crop",
@@ -152,7 +157,7 @@ const DEMO_DOGS_BASE = [
   },
   {
     id: "dog-olive",
-    shelterId: "shelter-bayview",
+    shelterId: "BV-012345",
     name: "Olive",
     photoUrl:
       "https://images.unsplash.com/photo-1583511655857-d19b40a7a54e?w=800&h=1000&fit=crop",
@@ -182,7 +187,7 @@ const DEMO_DOGS_BASE = [
   },
   {
     id: "dog-duke",
-    shelterId: "shelter-oakridge",
+    shelterId: "OR-067891",
     name: "Duke",
     photoUrl:
       "https://images.unsplash.com/photo-1561037404-61cd46aa615b?w=800&h=1000&fit=crop",
@@ -207,7 +212,7 @@ const DEMO_DOGS_BASE = [
   },
   {
     id: "dog-pepper",
-    shelterId: "shelter-bayview",
+    shelterId: "BV-012345",
     name: "Pepper",
     photoUrl:
       "https://images.unsplash.com/photo-1548199973-03cce0bbc87b?w=800&h=1000&fit=crop",
@@ -232,7 +237,7 @@ const DEMO_DOGS_BASE = [
   },
   {
     id: "dog-harbor",
-    shelterId: "shelter-oakridge",
+    shelterId: "OR-067891",
     name: "Harbor",
     photoUrl:
       "https://images.unsplash.com/photo-1477884213360-7e9d7dcc1e48?w=800&h=1000&fit=crop",

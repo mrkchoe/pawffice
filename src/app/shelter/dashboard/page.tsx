@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   addMonths,
@@ -179,7 +180,7 @@ export default function ShelterDashboardPage() {
   }
 
   function addSampleDog(photoUrl?: string) {
-    const shelterId = myShelters[0]?.id ?? "shelter-bayview";
+    const shelterId = myShelters[0]?.id ?? "BV-012345";
     const dog: Dog = {
       id: `dog-new-${Date.now()}`,
       shelterId,
@@ -550,33 +551,35 @@ function AppointmentList({
             const dog = dogs.find((d) => d.id === a.dogId);
             const user = checkoutUserParts(a.userId);
             return (
-              <li
-                key={a.id}
-                className="flex items-center gap-3 rounded-full bg-[var(--bg-deep)] px-3 py-2.5 sm:gap-4 sm:px-4"
-              >
-                <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-full bg-white ring-1 ring-[var(--line)]">
-                  {dog?.photoUrl ? (
-                    <Image
-                      src={dog.photoUrl}
-                      alt={dog.name}
-                      fill
-                      className="object-cover"
-                      sizes="48px"
-                    />
-                  ) : null}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-bold uppercase tracking-wide text-[var(--ink)]">
-                    {dog?.name ?? "Dog"}
-                  </p>
-                  <p className="text-sm font-semibold text-[var(--ink)]">
-                    {format(new Date(a.startsAt), "MM/dd/yyyy")}
-                  </p>
-                </div>
-                <div className="shrink-0 text-right text-sm leading-snug text-[var(--ink-soft)]">
-                  <p>{user.first}</p>
-                  <p>{user.last}</p>
-                </div>
+              <li key={a.id}>
+                <Link
+                  href={`/discover/${a.dogId}`}
+                  className="flex items-center gap-3 rounded-full bg-[var(--bg-deep)] px-3 py-2.5 transition hover:bg-[var(--brand)]/10 hover:ring-1 hover:ring-[var(--brand)]/30 sm:gap-4 sm:px-4"
+                >
+                  <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-full bg-white ring-1 ring-[var(--line)]">
+                    {dog?.photoUrl ? (
+                      <Image
+                        src={dog.photoUrl}
+                        alt={dog.name}
+                        fill
+                        className="object-cover"
+                        sizes="48px"
+                      />
+                    ) : null}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-bold uppercase tracking-wide text-[var(--ink)]">
+                      {dog?.name ?? "Dog"}
+                    </p>
+                    <p className="text-sm font-semibold text-[var(--ink)]">
+                      {format(new Date(a.startsAt), "MM/dd/yyyy")}
+                    </p>
+                  </div>
+                  <div className="shrink-0 text-right text-sm leading-snug text-[var(--ink-soft)]">
+                    <p>{user.first}</p>
+                    <p>{user.last}</p>
+                  </div>
+                </Link>
               </li>
             );
           })}

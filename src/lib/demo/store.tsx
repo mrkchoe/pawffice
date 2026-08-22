@@ -10,7 +10,12 @@ import {
   useSyncExternalStore,
   type ReactNode,
 } from "react";
-import { DEMO_ALEX_PREFERENCES, DEMO_DOGS, DEMO_SHELTERS } from "@/data/seed";
+import {
+  DEMO_ALEX_PREFERENCES,
+  DEMO_DOGS,
+  DEMO_SHELTERS,
+  LEGACY_SHELTER_IDS,
+} from "@/data/seed";
 import type {
   ActivityItem,
   Appointment,
@@ -42,11 +47,30 @@ function emptyState(): DemoState {
   };
 }
 
+function migrateShelterId(id: string): string {
+  return LEGACY_SHELTER_IDS[id] ?? id;
+}
+
 function normalizeDog(dog: Dog): Dog {
   return {
     ...dog,
+    shelterId: migrateShelterId(dog.shelterId),
     shelterNotes: dog.shelterNotes ?? "",
     experienceLog: dog.experienceLog ?? [],
+  };
+}
+
+function normalizeShelter(shelter: Shelter): Shelter {
+  return {
+    ...shelter,
+    id: migrateShelterId(shelter.id),
+  };
+}
+
+function normalizeAppointment(appt: Appointment): Appointment {
+  return {
+    ...appt,
+    shelterId: migrateShelterId(appt.shelterId),
   };
 }
 
@@ -61,7 +85,10 @@ function loadState(): DemoState {
       ...base,
       ...parsed,
       dogs: (parsed.dogs ?? base.dogs).map(normalizeDog),
-      shelters: parsed.shelters ?? base.shelters,
+      shelters: (parsed.shelters ?? base.shelters).map(normalizeShelter),
+      appointments: (parsed.appointments ?? base.appointments).map(
+        normalizeAppointment,
+      ),
     };
   } catch {
     return emptyState();
