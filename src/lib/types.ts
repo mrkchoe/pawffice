@@ -125,6 +125,21 @@ export interface Dog {
   availability: DayAvailability[];
   location: string;
   distanceMiles: number;
+  /** Freeform internal notes — never shown to WFH users. */
+  shelterNotes: string;
+  /** Past visits and companion experience reviews — shelter-only. */
+  experienceLog: DogExperienceEntry[];
+}
+
+/** Shelter-only history attached to a dog profile. */
+export interface DogExperienceEntry {
+  id: string;
+  kind: "visit" | "review";
+  at: string;
+  visitorName: string;
+  interactionType?: InteractionType;
+  rating?: number;
+  summary: string;
 }
 
 export interface SavedDog {
@@ -197,4 +212,5 @@ export interface DemoState {
   passedDogIds: string[];
   calendarMode: "mock" | "arcade";
   liabilityWaiver: LiabilityWaiver | null;
+  onboarding: OnboardingState;
 }
