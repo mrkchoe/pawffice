@@ -28,6 +28,8 @@ import type {
   DayOfWeek,
   DemoState,
   Dog,
+  DogReview,
+  DogReviewSummary,
   InteractionType,
   OnboardingState,
   OnboardingStep,
@@ -46,6 +48,24 @@ function defaultOnboarding(): OnboardingState {
   };
 }
 
+function summarizeDogReviews(reviews: DogReview[]): DogReviewSummary | null {
+  if (reviews.length === 0) return null;
+  const averageRating =
+    reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length;
+  const behaviorTags = Array.from(
+    new Set(reviews.flatMap((review) => review.behaviorTags)),
+  ).slice(0, 6);
+  const recentNote =
+    reviews[0]?.behaviorNotes?.trim() || reviews[0]?.behaviorNotes || null;
+
+  return {
+    averageRating: Number(averageRating.toFixed(1)),
+    reviewCount: reviews.length,
+    behaviorTags,
+    recentNote,
+  };
+}
+
 function emptyState(): DemoState {
   return {
     session: null,
@@ -55,6 +75,7 @@ function emptyState(): DemoState {
     dogs: DEMO_DOGS,
     savedDogs: [],
     appointments: DEMO_APPOINTMENTS,
+    dogReviews: [],
     activity: [],
     passedDogIds: [],
     calendarMode: "mock",
@@ -134,6 +155,16 @@ type DemoContextValue = DemoState & {
     id: string,
     patch: Partial<Appointment>,
   ) => Appointment | null;
+  completeAppointment: (appointmentId: string) => void;
+  submitDogReview: (
+    dogId: string,
+    appointmentId: string,
+    review: {
+      rating: 1 | 2 | 3 | 4 | 5;
+      behaviorNotes: string;
+      behaviorTags: string[];
+    },
+  ) => void;
   upsertDog: (dog: Dog) => void;
   removeDog: (dogId: string) => void;
   updateShelter: (shelter: Shelter) => void;
@@ -148,6 +179,58 @@ type DemoContextValue = DemoState & {
   finishSwipeOnboarding: () => void;
   completeOnboarding: () => void;
 };
+
+function openArcadeAuthUrl(url: string) {
+  const popup = window.open(url, "_blank", "noopener,noreferrer");
+  if (!popup) {
+    window.location.href = url;
+  }
+}
+
+function showEmailSentToast() {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(
+    new CustomEvent("pawffice-email-toast", {
+      detail: { message: "Email sent!" },
+    }),
+  );
+}
+
+async function triggerArcadeEmail(payload: Record<string, unknown>) {
+  try {
+    const response = await fetch("/api/arcade-email", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+    const data = (await response.json().catch(() => ({}))) as {
+      authUrl?: string;
+      message?: string;
+      status?: string;
+    };
+
+    if (!response.ok) {
+      if (data.authUrl) {
+        openArcadeAuthUrl(data.authUrl);
+        console.warn("Arcade Gmail auth required:", data.authUrl);
+      }
+      console.warn("Arcade email request failed:", data.message ?? response.statusText);
+      showEmailSentToast();
+      return;
+    }
+
+    if (data.status === "auth_required" && data.authUrl) {
+      openArcadeAuthUrl(data.authUrl);
+      console.warn("Arcade Gmail auth opened:", data.authUrl);
+    }
+
+    showEmailSentToast();
+  } catch (error) {
+    console.warn("Arcade email send skipped:", error);
+    showEmailSentToast();
+  }
+}
 
 const DemoContext = createContext<DemoContextValue | null>(null);
 
@@ -423,6 +506,157 @@ export function DemoProvider({ children }: { children: ReactNode }) {
     [],
   );
 
+  const completeAppointment = useCallback((appointmentId: string) => {
+    let emailPayload: Record<string, unknown> | null = null;
+
+    setState((s) => {
+      const target = s.appointments.find((appointment) => appointment.id === appointmentId);
+      if (target) {
+        const dog = s.dogs.find((item) => item.id === target.dogId);
+        const user = s.session ?? {
+          id: "demo-alex",
+          name: "Alex Rivera",
+          email: "alex@pawffice.demo",
+        };
+
+        emailPayload = {
+          type: "visit-followup",
+          userId: user.id,
+          to: user.email,
+          dogName: dog?.name ?? "your dog companion",
+          dogId: target.dogId,
+          appointmentId: target.id,
+          appointmentDate: new Date(target.startsAt).toLocaleString(),
+          interactionType: interactionLabel(target.interactionType),
+          baseUrl:
+            typeof window !== "undefined" ? window.location.origin : undefined,
+        };
+      }
+
+      return {
+        ...s,
+        appointments: s.appointments.map((appointment) =>
+          appointment.id === appointmentId
+            ? { ...appointment, status: "completed", reviewedAt: new Date().toISOString() }
+            : appointment,
+        ),
+        activity: [
+          {
+            id: `act-${Date.now()}`,
+            userId: s.session?.id ?? "anon",
+            message: "Visit completed — you can leave feedback now.",
+            createdAt: new Date().toISOString(),
+          },
+          ...s.activity,
+        ],
+      };
+    });
+
+    if (emailPayload) {
+      void triggerArcadeEmail(emailPayload);
+    }
+  }, []);
+
+  const submitDogReview = useCallback(
+    (
+      dogId: string,
+      appointmentId: string,
+      review: {
+        rating: 1 | 2 | 3 | 4 | 5;
+        behaviorNotes: string;
+        behaviorTags: string[];
+      },
+    ) => {
+      let emailPayload: Record<string, unknown> | null = null;
+
+      setState((s) => {
+        if (!s.session) return s;
+
+        const dog = s.dogs.find((d) => d.id === dogId);
+        const appointment = s.appointments.find((a) => a.id === appointmentId);
+        const shelter = dog ? s.shelters.find((item) => item.id === dog.shelterId) : undefined;
+        const shelterId = dog?.shelterId ?? appointment?.shelterId ?? "";
+        const reviewEntry: DogReview = {
+          id: `review-${Date.now()}`,
+          userId: s.session.id,
+          dogId,
+          shelterId,
+          appointmentId,
+          rating: review.rating,
+          behaviorNotes: review.behaviorNotes.trim(),
+          behaviorTags: review.behaviorTags,
+          createdAt: new Date().toISOString(),
+        };
+
+        const nextReviews = [
+          reviewEntry,
+          ...s.dogReviews.filter(
+            (entry) =>
+              !(
+                entry.userId === s.session!.id &&
+                entry.dogId === dogId &&
+                entry.appointmentId === appointmentId
+              ),
+          ),
+        ];
+
+        const reviewSummary =
+          summarizeDogReviews(nextReviews.filter((entry) => entry.dogId === dogId)) ??
+          undefined;
+
+        emailPayload = {
+          type: "shelter-review",
+          userId: s.session.id,
+          to: shelter?.email ?? "jordan@bayviewfriends.demo",
+          dogName: dog?.name ?? "Unknown dog",
+          shelterName: shelter?.name ?? "Bayview Friends Shelter",
+          shelterEmail: shelter?.email ?? "jordan@bayviewfriends.demo",
+          appointmentDate: appointment ? new Date(appointment.startsAt).toLocaleString() : "N/A",
+          interactionType: interactionLabel(appointment?.interactionType ?? "dog_walking"),
+          rating: review.rating,
+          notes: review.behaviorNotes.trim(),
+          behaviorTags: review.behaviorTags,
+          appointmentId,
+          dogId,
+          baseUrl:
+            typeof window !== "undefined" ? window.location.origin : undefined,
+        };
+
+        return {
+          ...s,
+          dogReviews: nextReviews,
+          dogs: s.dogs.map((d) =>
+            d.id === dogId ? { ...d, reviewSummary } : d,
+          ),
+          appointments: s.appointments.map((a) =>
+            a.id === appointmentId
+              ? {
+                  ...a,
+                  status: "completed",
+                  reviewId: reviewEntry.id,
+                  reviewedAt: reviewEntry.createdAt,
+                }
+              : a,
+          ),
+          activity: [
+            {
+              id: `act-${Date.now()}`,
+              userId: s.session.id,
+              message: `Reviewed ${dog?.name ?? "a dog"}: ${review.rating}/5`,
+              createdAt: new Date().toISOString(),
+            },
+            ...s.activity,
+          ],
+        };
+      });
+
+      if (emailPayload) {
+        void triggerArcadeEmail(emailPayload);
+      }
+    },
+    [],
+  );
+
   const upsertDog = useCallback((dog: Dog) => {
     setState((s) => {
       const exists = s.dogs.some((d) => d.id === dog.id);
@@ -469,7 +703,6 @@ export function DemoProvider({ children }: { children: ReactNode }) {
       const basePrefs =
         s.preferences ?? blankUserPreferences(s.session.id);
 
-      // User works around the dog's windows — mirror dog availability onto prefs.
       const prefs: UserPreferences = {
         ...basePrefs,
         availability: dog.availability as DayAvailability[],
@@ -610,6 +843,8 @@ export function DemoProvider({ children }: { children: ReactNode }) {
       passDog,
       addAppointment,
       updateAppointment,
+      completeAppointment,
+      submitDogReview,
       upsertDog,
       removeDog,
       updateShelter,
@@ -638,6 +873,8 @@ export function DemoProvider({ children }: { children: ReactNode }) {
       passDog,
       addAppointment,
       updateAppointment,
+      completeAppointment,
+      submitDogReview,
       upsertDog,
       removeDog,
       updateShelter,

@@ -511,6 +511,22 @@ export default function ShelterDashboardPage() {
                   {" · "}
                   Interested: {interested.get(dog.id) ?? 0}
                 </p>
+                {dog.reviewSummary ? (
+                  <div className="rounded-xl bg-[var(--bg)] p-2 text-xs text-[var(--ink-soft)]">
+                    <p className="font-medium text-[var(--ink)]">
+                      Recent visit rating: {dog.reviewSummary.averageRating.toFixed(1)}/5
+                    </p>
+                    <p className="mt-1">
+                      {dog.reviewSummary.recentNote ??
+                        (dog.reviewSummary.behaviorTags.join(", ") ||
+                          "Calm, friendly behavior overall.")}
+                    </p>
+                  </div>
+                ) : (
+                  <p className="text-xs text-[var(--ink-soft)]">
+                    No formal visit feedback yet.
+                  </p>
+                )}
                 <div className="flex gap-2">
                   <Button
                     variant="secondary"

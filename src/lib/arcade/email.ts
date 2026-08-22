@@ -1,106 +1,453 @@
-import Arcade from "@arcadeai/arcadejs";
-import {
-  CalendarAuthorizationError,
-  type CalendarAuthResult,
-  type EmailProvider,
-  type EmailSendInput,
-  type EmailSendResult,
-} from "./types";
+"use client";
 
-/**
- * Shelter Gmail via Arcade — confirmation emails after match approval.
- * Tool: Gmail.SendEmail (recipient / subject / body).
- */
-export class ArcadeEmailProvider implements EmailProvider {
-  private client: Arcade;
-  private arcadeUserId: string;
+import { useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
+import { AppNav } from "@/components/layout/AppNav";
+import { DogCard } from "@/components/dogs/DogCard";
+import { Button, ButtonLink } from "@/components/ui/Button";
+import { calculateDogMatch } from "@/lib/matching/calculateDogMatch";
+import { interactionLabel, useDemo } from "@/lib/demo/store";
+import { DEMO_ALEX_PREFERENCES } from "@/data/seed";
+import { useRouter } from "next/navigation";
 
-  constructor(arcadeUserId: string, apiKey = process.env.ARCADE_API_KEY) {
-    if (!apiKey) {
-      throw new Error("ARCADE_API_KEY is required for ArcadeEmailProvider.");
-    }
-    this.client = new Arcade({ apiKey });
-    this.arcadeUserId = arcadeUserId;
-  }
+const behaviorOptions = [
+  "gentle",
+  "friendly",
+  "curious",
+  "calm",
+  "playful",
+  "responsive",
+  "shy",
+  "anxious",
+  "leash-pulling",
+];
 
-  async ensureAuthorized(
-    arcadeUserId = this.arcadeUserId,
-  ): Promise<CalendarAuthResult> {
-    const auth = await this.client.tools.authorize({
-      tool_name: "Gmail.SendEmail",
-      user_id: arcadeUserId,
+export default function DashboardPage() {
+  const router = useRouter();
+  const {
+    session,
+    preferences,
+    backgroundCheck,
+    dogs,
+    savedDogs,
+    appointments,
+    activity,
+    dogReviews,
+    setBackgroundStatus,
+    submitDogReview,
+  } = useDemo();
+
+  const prefs = preferences ?? DEMO_ALEX_PREFERENCES;
+  const feedbackSectionRef = useRef<HTMLElement | null>(null);
+  const feedbackFormRef = useRef<HTMLDivElement | null>(null);
+  const [reviewDogId, setReviewDogId] = useState<string | null>(null);
+  const [reviewAppointmentId, setReviewAppointmentId] = useState<string | null>(null);
+  const [reviewRating, setReviewRating] = useState<1 | 2 | 3 | 4 | 5>(5);
+  const [reviewNotes, setReviewNotes] = useState("");
+  const [reviewTags, setReviewTags] = useState<string[]>([]);
+  const [selectedReviewId, setSelectedReviewId] = useState<string | null>(null);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  const topMatches = useMemo(
+    () =>
+      dogs
+        .map((dog) => ({ dog, match: calculateDogMatch(prefs, dog) }))
+        .sort((a, b) => b.match.score - a.match.score)
+        .slice(0, 3),
+    [dogs, prefs],
+  );
+
+  const saved = useMemo(() => {
+    if (!session) return [];
+    return savedDogs
+      .filter((s) => s.userId === session.id)
+      .map((s) => dogs.find((d) => d.id === s.dogId))
+      .filter(Boolean)
+      .slice(0, 4);
+  }, [savedDogs, dogs, session]);
+
+  const upcoming = useMemo(
+    () =>
+      appointments
+        .filter(
+          (a) =>
+            a.userId === session?.id &&
+            (a.status === "scheduled" ||
+              a.status === "approved" ||
+              a.status === "pending"),
+        )
+        .sort((a, b) => a.startsAt.localeCompare(b.startsAt))
+        .slice(0, 3),
+    [appointments, session?.id],
+  );
+
+  const reviewableVisits = useMemo(
+    () =>
+      appointments
+        .filter((a) => a.userId === session?.id)
+        .filter(
+          (a) =>
+            a.status === "completed" ||
+            new Date(a.startsAt) <= new Date(),
+        )
+        .sort((a, b) => b.startsAt.localeCompare(a.startsAt)),
+    [appointments, session?.id],
+  );
+
+  const selectedDog = dogs.find((dog) => dog.id === reviewDogId) ?? null;
+  const selectedReview =
+    selectedReviewId !== null
+      ? dogReviews.find((review) => review.id === selectedReviewId) ?? null
+      : null;
+
+  useEffect(() => {
+    if (!selectedDog || !feedbackFormRef.current) return;
+    feedbackFormRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [selectedDog]);
+
+  useEffect(() => {
+    const unreviewedCompleted = reviewableVisits.find(
+      (appointment) => appointment.status === "completed" && !appointment.reviewId,
+    );
+
+    if (!unreviewedCompleted || selectedDog) return;
+    const reviewMatch = dogReviews.find(
+      (review) => review.appointmentId === unreviewedCompleted.id,
+    );
+
+    if (reviewMatch) return;
+    feedbackSectionRef.current?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
     });
-    if (auth.status !== "completed") {
-      return { authorized: false, authUrl: auth.url ?? undefined };
+    openReview(unreviewedCompleted.dogId, unreviewedCompleted.id);
+  }, [dogReviews, reviewableVisits, selectedDog]);
+
+  useEffect(() => {
+    function handleToast(event: Event) {
+      const customEvent = event as CustomEvent<{ message?: string }>;
+      const message = customEvent.detail?.message ?? "Email sent!";
+      setToastMessage(message);
+      window.setTimeout(() => setToastMessage(null), 2500);
     }
-    return { authorized: true };
+
+    window.addEventListener("pawffice-email-toast", handleToast);
+    return () => window.removeEventListener("pawffice-email-toast", handleToast);
+  }, []);
+
+  useEffect(() => {
+    if (session && !preferences) router.replace("/onboarding");
+  }, [session, preferences, router]);
+
+  function openReview(
+    dogId: string,
+    appointmentId: string,
+    existingReview?: { id: string; rating: 1 | 2 | 3 | 4 | 5; behaviorNotes: string; behaviorTags: string[] },
+  ) {
+    const dog = dogs.find((item) => item.id === dogId);
+    setReviewDogId(dogId);
+    setReviewAppointmentId(appointmentId);
+    setSelectedReviewId(existingReview?.id ?? null);
+    setReviewRating(existingReview?.rating ?? 5);
+    setReviewNotes(existingReview?.behaviorNotes ?? "");
+    setReviewTags(existingReview?.behaviorTags ?? dog?.reviewSummary?.behaviorTags?.slice(0, 2) ?? []);
   }
 
-  async sendEmail(input: EmailSendInput): Promise<EmailSendResult> {
-    try {
-      const response = await this.client.tools.execute({
-        tool_name: "Gmail.SendEmail",
-        user_id: this.arcadeUserId,
-        input: {
-          recipient: input.to,
-          subject: input.subject,
-          body: input.body,
-        },
-      });
-
-      const r = response as {
-        success?: boolean;
-        output?: {
-          value?: { id?: string };
-          authorization?: { url?: string; status?: string };
-          error?: { message?: string };
-        };
-      };
-
-      if (
-        r.output?.authorization?.status &&
-        r.output.authorization.status !== "completed"
-      ) {
-        throw new CalendarAuthorizationError(
-          "Gmail authorization required to email the matched user",
-          r.output.authorization.url,
-        );
-      }
-
-      if (r.success === false || r.output?.error) {
-        throw new Error(r.output?.error?.message || "Gmail.SendEmail failed");
-      }
-
-      const value = r.output?.value;
-      return {
-        id:
-          (value && typeof value.id === "string" && value.id) ||
-          `arcade-mail-${Date.now()}`,
-        provider: "arcade",
-      };
-    } catch (error) {
-      if (error instanceof CalendarAuthorizationError) throw error;
-      const message =
-        error instanceof Error ? error.message : String(error ?? "");
-      if (/authorization required|403/i.test(message)) {
-        const auth = await this.ensureAuthorized();
-        throw new CalendarAuthorizationError(
-          "Gmail authorization required to email the matched user",
-          auth.authUrl,
-        );
-      }
-      throw error instanceof Error ? error : new Error(message);
-    }
-  }
-}
-
-export class MockEmailProvider implements EmailProvider {
-  async ensureAuthorized() {
-    return { authorized: true as const };
+  function cancelReview() {
+    setReviewDogId(null);
+    setReviewAppointmentId(null);
+    setReviewNotes("");
+    setReviewRating(5);
+    setReviewTags([]);
+    setSelectedReviewId(null);
   }
 
-  async sendEmail(input: EmailSendInput): Promise<EmailSendResult> {
-    console.info("[MockEmailProvider]", input.to, input.subject);
-    return { id: `mock-mail-${Date.now()}`, provider: "mock" };
+  function submitReview() {
+    if (!reviewDogId || !reviewAppointmentId) return;
+    submitDogReview(reviewDogId, reviewAppointmentId, {
+      rating: reviewRating,
+      behaviorNotes: reviewNotes.trim(),
+      behaviorTags: reviewTags,
+    });
+    cancelReview();
   }
+
+  if (session && !preferences) {
+    return (
+      <div className="min-h-screen">
+        <AppNav />
+        <p className="p-8 text-[var(--ink-soft)]">Loading…</p>
+      </div>
+    );
+  }
+
+  if (!session) {
+    return (
+      <div className="min-h-screen">
+        <AppNav />
+        <div className="p-8">
+          <Button onClick={() => router.push("/demo")}>Demo login</Button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen pb-16">
+      <AppNav />
+      <div className="mx-auto max-w-6xl px-4 py-8">
+        {toastMessage && (
+          <div className="fixed right-5 top-5 z-50 flex items-center gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 shadow-xl shadow-emerald-950/10 ring-1 ring-emerald-200">
+            <div className="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-500 text-sm font-bold text-white">
+              ✓
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-emerald-900">{toastMessage}</p>
+              <p className="text-xs text-emerald-700">A confirmation message was sent.</p>
+            </div>
+          </div>
+        )}
+
+        <h1 className="font-display text-4xl">Hi, {session.name.split(" ")[0]}</h1>
+        <p className="mt-1 text-[var(--ink-soft)]">
+          Your WFH companion dashboard
+        </p>
+
+        <div className="mt-8 grid gap-4 md:grid-cols-3">
+          <div className="rounded-3xl bg-white p-5 ring-1 ring-[var(--line)]">
+            <p className="text-xs uppercase tracking-wide text-[var(--ink-soft)]">
+              Background check
+            </p>
+            <p className="mt-2 font-display text-2xl capitalize">
+              {backgroundCheck?.status ?? "not_started"}
+            </p>
+            {backgroundCheck?.status !== "approved" && (
+              <Button
+                className="mt-4"
+                onClick={() => setBackgroundStatus("approved")}
+              >
+                Demo: approve now
+              </Button>
+            )}
+          </div>
+          <div className="rounded-3xl bg-white p-5 ring-1 ring-[var(--line)]">
+            <p className="text-xs uppercase tracking-wide text-[var(--ink-soft)]">
+              Saved dogs
+            </p>
+            <p className="mt-2 font-display text-2xl">{saved.length}</p>
+            <ButtonLink href="/matches" variant="ghost" className="mt-3 px-0">
+              View matches →
+            </ButtonLink>
+          </div>
+          <div className="rounded-3xl bg-white p-5 ring-1 ring-[var(--line)]">
+            <p className="text-xs uppercase tracking-wide text-[var(--ink-soft)]">
+              Upcoming visits
+            </p>
+            <p className="mt-2 font-display text-2xl">{upcoming.length}</p>
+            <ButtonLink href="/schedule" variant="ghost" className="mt-3 px-0">
+              Schedule →
+            </ButtonLink>
+          </div>
+        </div>
+
+        <section className="mt-10">
+          <div className="flex items-end justify-between">
+            <h2 className="font-display text-2xl">Top dog matches</h2>
+            <Link href="/discover" className="text-sm text-[var(--brand)]">
+              Discover all
+            </Link>
+          </div>
+          <div className="mt-4 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {topMatches.map(({ dog, match }) => (
+              <DogCard key={dog.id} dog={dog} match={match} />
+            ))}
+          </div>
+        </section>
+
+        <div className="mt-10 grid gap-6 lg:grid-cols-2">
+          <section className="rounded-3xl bg-white p-6 ring-1 ring-[var(--line)]">
+            <h2 className="font-display text-xl">Upcoming dog visits</h2>
+            {upcoming.length === 0 ? (
+              <p className="mt-3 text-sm text-[var(--ink-soft)]">
+                No visits yet — approve your check, then schedule from a dog
+                profile.
+              </p>
+            ) : (
+              <ul className="mt-4 space-y-3 text-sm">
+                {upcoming.map((a) => {
+                  const d = dogs.find((x) => x.id === a.dogId);
+                  return (
+                    <li key={a.id}>
+                      <strong>{d?.name}</strong> ·{" "}
+                      {new Date(a.startsAt).toLocaleString()} ·{" "}
+                      {interactionLabel(a.interactionType)}
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </section>
+
+          <section className="rounded-3xl bg-white p-6 ring-1 ring-[var(--line)]">
+            <h2 className="font-display text-xl">Recent activity</h2>
+            <ul className="mt-4 space-y-2 text-sm text-[var(--ink-soft)]">
+              {activity.slice(0, 6).map((a) => (
+                <li key={a.id}>
+                  {a.message}
+                  <span className="ml-2 text-xs opacity-70">
+                    {new Date(a.createdAt).toLocaleTimeString()}
+                  </span>
+                </li>
+              ))}
+              {activity.length === 0 && <li>No activity yet.</li>}
+            </ul>
+          </section>
+        </div>
+
+        <section
+          id="visit-feedback"
+          ref={feedbackSectionRef}
+          className="mt-10 rounded-3xl bg-white p-6 ring-1 ring-[var(--line)]"
+        >
+          <h2 className="font-display text-2xl">Dog visit feedback</h2>
+          {reviewableVisits.length === 0 ? (
+            <p className="mt-3 text-sm text-[var(--ink-soft)]">
+              Your past dog visits will show up here once you meet a pup.
+            </p>
+          ) : (
+            <ul className="mt-4 space-y-3">
+              {reviewableVisits.map((appointment) => {
+                const dog = dogs.find((item) => item.id === appointment.dogId);
+                return (
+                  <li
+                    key={appointment.id}
+                    className="flex flex-col gap-3 rounded-2xl border border-[var(--line)] bg-[var(--bg)] p-4 sm:flex-row sm:items-center sm:justify-between"
+                  >
+                    <div>
+                      <p className="font-medium text-[var(--ink)]">
+                        {dog?.name ?? "Dog"}
+                      </p>
+                      <p className="text-sm text-[var(--ink-soft)]">
+                        {new Date(appointment.startsAt).toLocaleString()} ·{" "}
+                        {interactionLabel(appointment.interactionType)}
+                      </p>
+                    </div>
+                    {appointment.status === "completed" ? (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          openReview(
+                            appointment.dogId,
+                            appointment.id,
+                            dogReviews.find(
+                              (review) =>
+                                review.appointmentId === appointment.id &&
+                                review.userId === session.id,
+                            ) ?? undefined,
+                          )
+                        }
+                        className="text-sm font-medium text-[var(--brand)] underline-offset-2 hover:underline"
+                      >
+                        {appointment.reviewId || dogReviews.some(
+                          (review) =>
+                            review.appointmentId === appointment.id &&
+                            review.userId === session.id,
+                        )
+                          ? `Reviewed · ${dog?.reviewSummary?.averageRating ?? "—"}/5`
+                          : "Leave feedback"}
+                      </button>
+                    ) : (
+                      <Button
+                        variant="secondary"
+                        onClick={() => openReview(appointment.dogId, appointment.id)}
+                      >
+                        Review visit
+                      </Button>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+
+          {selectedDog && (
+            <div
+              ref={feedbackFormRef}
+              className="mt-6 rounded-2xl bg-[var(--bg-deep)] p-5 ring-1 ring-[var(--line)]"
+            >
+              <h3 className="font-display text-xl">
+                {selectedReview ? "Your feedback for " : "How did "}
+                {selectedDog.name}
+                {selectedReview ? "" : " do?"}
+              </h3>
+              <div className="mt-4 flex flex-wrap gap-2">
+                {[1, 2, 3, 4, 5].map((value) => (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => setReviewRating(value as 1 | 2 | 3 | 4 | 5)}
+                    className={`rounded-full px-3 py-1.5 text-sm ring-1 ${
+                      reviewRating === value
+                        ? "bg-[var(--brand)] text-white ring-[var(--brand)]"
+                        : "bg-white text-[var(--ink)] ring-[var(--line)]"
+                    }`}
+                  >
+                    {value}★
+                  </button>
+                ))}
+              </div>
+
+              <div className="mt-4">
+                <p className="text-sm font-medium text-[var(--ink)]">
+                  Behavior notes
+                </p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {behaviorOptions.map((tag) => {
+                    const active = reviewTags.includes(tag);
+                    return (
+                      <button
+                        key={tag}
+                        type="button"
+                        onClick={() =>
+                          setReviewTags((current) =>
+                            active
+                              ? current.filter((item) => item !== tag)
+                              : [...current, tag],
+                          )
+                        }
+                        className={`rounded-full px-3 py-1 text-xs transition ${
+                          active
+                            ? "bg-[var(--accent-soft)] text-[var(--ink)] ring-1 ring-[var(--brand)]"
+                            : "bg-white text-[var(--ink-soft)] ring-1 ring-[var(--line)]"
+                        }`}
+                      >
+                        {tag}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <textarea
+                value={reviewNotes}
+                onChange={(event) => setReviewNotes(event.target.value)}
+                rows={4}
+                className="mt-4 w-full rounded-2xl border border-[var(--line)] bg-white p-3 text-sm text-[var(--ink)] outline-none focus:border-[var(--brand)]"
+                placeholder="Share what the dog did well, any triggers, or how they behaved during the visit."
+              />
+
+              <div className="mt-4 flex gap-3">
+                <Button onClick={submitReview}>
+                  {selectedReview ? "Update review" : "Save review"}
+                </Button>
+                <Button variant="secondary" onClick={cancelReview}>
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          )}
+        </section>
+      </div>
+    </div>
+  );
 }

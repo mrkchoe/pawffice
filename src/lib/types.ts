@@ -103,6 +103,25 @@ export interface Shelter {
   ownerUserId: string;
 }
 
+export interface DogReviewSummary {
+  averageRating: number;
+  reviewCount: number;
+  behaviorTags: string[];
+  recentNote: string | null;
+}
+
+export interface DogReview {
+  id: string;
+  userId: string;
+  dogId: string;
+  shelterId: string;
+  appointmentId?: string;
+  rating: 1 | 2 | 3 | 4 | 5;
+  behaviorNotes: string;
+  behaviorTags: string[];
+  createdAt: string;
+}
+
 export interface Dog {
   id: string;
   shelterId: string;
@@ -131,6 +150,8 @@ export interface Dog {
   shelterNotes: string;
   /** Past visits and companion experience reviews — shelter-only. */
   experienceLog: DogExperienceEntry[];
+  /** Aggregated from WFH-user-submitted DogReviews (post-visit feedback). */
+  reviewSummary?: DogReviewSummary;
 }
 
 /** Shelter-only history attached to a dog profile. */
@@ -165,6 +186,8 @@ export interface Appointment {
   calendarProvider: "mock" | "arcade";
   emailId?: string;
   notes?: string;
+  reviewId?: string;
+  reviewedAt?: string;
   createdAt: string;
 }
 
@@ -211,6 +234,7 @@ export interface DemoState {
   dogs: Dog[];
   savedDogs: SavedDog[];
   appointments: Appointment[];
+  dogReviews: DogReview[];
   activity: ActivityItem[];
   passedDogIds: string[];
   calendarMode: "mock" | "arcade";

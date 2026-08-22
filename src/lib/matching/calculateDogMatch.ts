@@ -99,12 +99,37 @@ function availabilityOverlap(
   };
 }
 
+function reviewBoost(dog: Dog): { score: number; reason?: string } {
+  if (!dog.reviewSummary || dog.reviewSummary.reviewCount === 0) {
+    return { score: 0 };
+  }
+
+  const avg = dog.reviewSummary.averageRating;
+  let score = 0;
+
+  if (avg >= 4.5) score = 18;
+  else if (avg >= 4) score = 12;
+  else if (avg >= 3.5) score = 6;
+  else if (avg < 3) score = -8;
+
+  return {
+    score,
+    reason: `Recent visits rate ${dog.name} ${avg.toFixed(1)}/5 for fit and behavior`,
+  };
+}
+
 function secondaryScore(
   prefs: UserPreferences,
   dog: Dog,
 ): { score: number; reasons: string[] } {
   let score = 50;
   const reasons: string[] = [];
+
+  const review = reviewBoost(dog);
+  if (review.score !== 0) {
+    score += review.score;
+    reasons.push(review.reason ?? "");
+  }
 
   if (prefs.housingType === "apartment" || prefs.housingType === "condo") {
     if (dog.temperamentTags.includes("apartment-friendly") || dog.size !== "large") {
