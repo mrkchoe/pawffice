@@ -226,6 +226,17 @@ export interface OnboardingState {
   swipeFinished: boolean;
 }
 
+/** Saved WFH demo profiles so users can switch Alex / new / previous. */
+export interface WfhAccount {
+  profile: Profile;
+  preferences: UserPreferences | null;
+  backgroundCheck: BackgroundCheck | null;
+  onboarding: OnboardingState;
+  passedDogIds: string[];
+  liabilityWaiver: LiabilityWaiver | null;
+  lastActiveAt: string;
+}
+
 export interface DemoState {
   session: Profile | null;
   preferences: UserPreferences | null;
@@ -240,4 +251,5 @@ export interface DemoState {
   calendarMode: "mock" | "arcade";
   liabilityWaiver: LiabilityWaiver | null;
   onboarding: OnboardingState;
+  wfhAccounts: WfhAccount[];
 }

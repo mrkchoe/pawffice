@@ -91,7 +91,7 @@ export function AppNav() {
             </>
           ) : (
             <Link
-              href="/demo"
+              href="/demo?role=user"
               className="rounded-full bg-[var(--brand)] px-4 py-2 text-sm font-medium text-white hover:bg-[var(--brand-deep)]"
             >
               Demo login

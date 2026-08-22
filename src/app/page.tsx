@@ -29,11 +29,11 @@ export default function LandingPage() {
                 href={
                   session?.role === "shelter"
                     ? "/shelter/dashboard"
-                    : session
+                    : session?.role === "wfh"
                       ? preferences
                         ? "/discover"
                         : "/onboarding"
-                      : "/demo"
+                      : "/demo?role=user"
                 }
               >
                 Find My Match
@@ -99,7 +99,7 @@ export default function LandingPage() {
             </ol>
             <p className="mt-10 text-sm text-[var(--ink-soft)]">
               Prefer the guided story?{" "}
-              <Link href="/demo" className="font-medium text-[var(--brand)] underline">
+              <Link href="/demo?role=user" className="font-medium text-[var(--brand)] underline">
                 Open demo mode
               </Link>
             </p>

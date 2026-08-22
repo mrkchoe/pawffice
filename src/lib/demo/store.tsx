@@ -36,6 +36,7 @@ import type {
   Profile,
   Shelter,
   UserPreferences,
+  WfhAccount,
 } from "@/lib/types";
 
 const STORAGE_KEY = "pawffice-demo-v2";
@@ -46,6 +47,47 @@ function defaultOnboarding(): OnboardingState {
     chosenDogId: null,
     swipeFinished: false,
   };
+}
+
+function snapshotWfhAccount(s: DemoState): WfhAccount | null {
+  if (!s.session || s.session.role !== "wfh") return null;
+  return {
+    profile: s.session,
+    preferences: s.preferences,
+    backgroundCheck: s.backgroundCheck,
+    onboarding: s.onboarding,
+    passedDogIds: s.passedDogIds,
+    liabilityWaiver: s.liabilityWaiver,
+    lastActiveAt: new Date().toISOString(),
+  };
+}
+
+function upsertWfhAccount(
+  accounts: WfhAccount[],
+  account: WfhAccount,
+): WfhAccount[] {
+  const rest = accounts.filter((a) => a.profile.id !== account.profile.id);
+  return [account, ...rest].sort((a, b) =>
+    b.lastActiveAt.localeCompare(a.lastActiveAt),
+  );
+}
+
+function applyWfhAccount(s: DemoState, account: WfhAccount): DemoState {
+  return {
+    ...s,
+    session: account.profile,
+    preferences: account.preferences,
+    backgroundCheck: account.backgroundCheck,
+    onboarding: account.onboarding,
+    passedDogIds: account.passedDogIds,
+    liabilityWaiver: account.liabilityWaiver,
+  };
+}
+
+function persistCurrentWfh(s: DemoState): DemoState {
+  const snap = snapshotWfhAccount(s);
+  if (!snap) return s;
+  return { ...s, wfhAccounts: upsertWfhAccount(s.wfhAccounts, snap) };
 }
 
 function summarizeDogReviews(reviews: DogReview[]): DogReviewSummary | null {
@@ -81,6 +123,7 @@ function emptyState(): DemoState {
     calendarMode: "mock",
     liabilityWaiver: null,
     onboarding: defaultOnboarding(),
+    wfhAccounts: [],
   };
 }
 
@@ -133,6 +176,7 @@ function loadState(): DemoState {
           ? parsed.appointments
           : DEMO_APPOINTMENTS
       ).map(normalizeAppointment),
+      wfhAccounts: parsed.wfhAccounts ?? [],
     };
   } catch {
     return emptyState();
@@ -142,6 +186,8 @@ function loadState(): DemoState {
 type DemoContextValue = DemoState & {
   hydrated: boolean;
   loginAsAlex: (opts?: { skipQuestionnaire?: boolean }) => void;
+  loginAsNewUser: (input: { name: string; email?: string }) => void;
+  loginAsPreviousUser: (userId: string) => void;
   loginAsShelter: () => void;
   logout: () => void;
   resetDemo: () => void;
@@ -272,42 +318,141 @@ export function DemoProvider({ children }: { children: ReactNode }) {
   }, [state.session?.id]);
 
   const loginAsAlex = useCallback((opts?: { skipQuestionnaire?: boolean }) => {
-    const session: Profile = {
-      id: "demo-alex",
-      role: "wfh",
-      name: "Alex Rivera",
-      email: "alex@pawffice.demo",
-      location: "San Francisco, CA",
-      createdAt: new Date().toISOString(),
-    };
     const skip = Boolean(opts?.skipQuestionnaire);
-    const backgroundCheck: BackgroundCheck = {
-      userId: session.id,
-      status: skip ? "approved" : "not_started",
-      provider: "mock_checkr",
-      submittedAt: skip ? new Date().toISOString() : undefined,
-      decidedAt: skip ? new Date().toISOString() : undefined,
-      notes: skip ? "Mock Checkr: clear — demo approval" : undefined,
-    };
-    setState((s) => ({
-      ...s,
-      session,
-      preferences: skip ? { ...DEMO_ALEX_PREFERENCES } : null,
-      backgroundCheck,
-      passedDogIds: [],
-      onboarding: defaultOnboarding(),
-      activity: [
-        {
-          id: `act-${Date.now()}`,
-          userId: session.id,
-          message: skip
-            ? "Signed in as Alex with approved background check"
-            : "Signed in as Alex (demo WFH user)",
-          createdAt: new Date().toISOString(),
+    setState((s) => {
+      const saved = persistCurrentWfh(s);
+      const existing = saved.wfhAccounts.find((a) => a.profile.id === "demo-alex");
+
+      if (existing && !skip) {
+        const updated = {
+          ...existing,
+          lastActiveAt: new Date().toISOString(),
+        };
+        return {
+          ...applyWfhAccount(saved, updated),
+          wfhAccounts: upsertWfhAccount(saved.wfhAccounts, updated),
+          activity: [
+            {
+              id: `act-${Date.now()}`,
+              userId: "demo-alex",
+              message: "Signed back in as Alex (demo WFH user)",
+              createdAt: new Date().toISOString(),
+            },
+            ...saved.activity,
+          ],
+        };
+      }
+
+      const session: Profile = {
+        id: "demo-alex",
+        role: "wfh",
+        name: "Alex Rivera",
+        email: "alex@pawffice.demo",
+        location: "San Francisco, CA",
+        createdAt: existing?.profile.createdAt ?? new Date().toISOString(),
+      };
+      const backgroundCheck: BackgroundCheck = {
+        userId: session.id,
+        status: skip ? "approved" : "not_started",
+        provider: "mock_checkr",
+        submittedAt: skip ? new Date().toISOString() : undefined,
+        decidedAt: skip ? new Date().toISOString() : undefined,
+        notes: skip ? "Mock Checkr: clear — demo approval" : undefined,
+      };
+      const next: DemoState = {
+        ...saved,
+        session,
+        preferences: skip ? { ...DEMO_ALEX_PREFERENCES } : null,
+        backgroundCheck,
+        passedDogIds: [],
+        onboarding: skip
+          ? { ...defaultOnboarding(), step: "done", swipeFinished: true }
+          : defaultOnboarding(),
+        activity: [
+          {
+            id: `act-${Date.now()}`,
+            userId: session.id,
+            message: skip
+              ? "Signed in as Alex with approved background check"
+              : "Signed in as Alex (demo WFH user)",
+            createdAt: new Date().toISOString(),
+          },
+          ...saved.activity,
+        ],
+      };
+      return persistCurrentWfh(next);
+    });
+  }, []);
+
+  const loginAsNewUser = useCallback((input: { name: string; email?: string }) => {
+    const name = input.name.trim() || "New user";
+    const slug = name
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "")
+      .slice(0, 24);
+    const id = `user-${slug || "guest"}-${Date.now().toString(36)}`;
+    const email = input.email?.trim() || `${slug || "guest"}@pawffice.demo`;
+
+    setState((s) => {
+      const saved = persistCurrentWfh(s);
+      const session: Profile = {
+        id,
+        role: "wfh",
+        name,
+        email,
+        location: "San Francisco, CA",
+        createdAt: new Date().toISOString(),
+      };
+      const next: DemoState = {
+        ...saved,
+        session,
+        preferences: null,
+        backgroundCheck: {
+          userId: id,
+          status: "not_started",
+          provider: "mock_checkr",
         },
-        ...s.activity,
-      ],
-    }));
+        passedDogIds: [],
+        liabilityWaiver: null,
+        onboarding: defaultOnboarding(),
+        activity: [
+          {
+            id: `act-${Date.now()}`,
+            userId: id,
+            message: `Created new WFH user ${name}`,
+            createdAt: new Date().toISOString(),
+          },
+          ...saved.activity,
+        ],
+      };
+      return persistCurrentWfh(next);
+    });
+  }, []);
+
+  const loginAsPreviousUser = useCallback((userId: string) => {
+    setState((s) => {
+      const saved = persistCurrentWfh(s);
+      const account = saved.wfhAccounts.find((a) => a.profile.id === userId);
+      if (!account) return saved;
+      const updated = {
+        ...account,
+        lastActiveAt: new Date().toISOString(),
+      };
+      return {
+        ...applyWfhAccount(saved, updated),
+        wfhAccounts: upsertWfhAccount(saved.wfhAccounts, updated),
+        activity: [
+          {
+            id: `act-${Date.now()}`,
+            userId,
+            message: `Switched to previous user ${account.profile.name}`,
+            createdAt: new Date().toISOString(),
+          },
+          ...saved.activity,
+        ],
+      };
+    });
   }, []);
 
   const loginAsShelter = useCallback(() => {
@@ -319,32 +464,38 @@ export function DemoProvider({ children }: { children: ReactNode }) {
       location: "San Francisco, CA",
       createdAt: new Date().toISOString(),
     };
-    setState((s) => ({
-      ...s,
-      session,
-      preferences: null,
-      backgroundCheck: null,
-      onboarding: { ...defaultOnboarding(), step: "done" },
-      activity: [
-        {
-          id: `act-${Date.now()}`,
-          userId: session.id,
-          message: "Signed in as Bayview shelter staff (demo)",
-          createdAt: new Date().toISOString(),
-        },
-        ...s.activity,
-      ],
-    }));
+    setState((s) => {
+      const saved = persistCurrentWfh(s);
+      return {
+        ...saved,
+        session,
+        preferences: null,
+        backgroundCheck: null,
+        onboarding: { ...defaultOnboarding(), step: "done" },
+        activity: [
+          {
+            id: `act-${Date.now()}`,
+            userId: session.id,
+            message: "Signed in as Bayview shelter staff (demo)",
+            createdAt: new Date().toISOString(),
+          },
+          ...saved.activity,
+        ],
+      };
+    });
   }, []);
 
   const logout = useCallback(() => {
-    setState((s) => ({
-      ...s,
-      session: null,
-      preferences: null,
-      backgroundCheck: null,
-      onboarding: defaultOnboarding(),
-    }));
+    setState((s) => {
+      const saved = persistCurrentWfh(s);
+      return {
+        ...saved,
+        session: null,
+        preferences: null,
+        backgroundCheck: null,
+        onboarding: defaultOnboarding(),
+      };
+    });
   }, []);
 
   const resetDemo = useCallback(() => {
@@ -832,6 +983,8 @@ export function DemoProvider({ children }: { children: ReactNode }) {
       ...state,
       hydrated,
       loginAsAlex,
+      loginAsNewUser,
+      loginAsPreviousUser,
       loginAsShelter,
       logout,
       resetDemo,
@@ -862,6 +1015,8 @@ export function DemoProvider({ children }: { children: ReactNode }) {
       state,
       hydrated,
       loginAsAlex,
+      loginAsNewUser,
+      loginAsPreviousUser,
       loginAsShelter,
       logout,
       resetDemo,
