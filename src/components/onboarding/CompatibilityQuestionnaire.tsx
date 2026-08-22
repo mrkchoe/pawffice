@@ -125,7 +125,8 @@ export function CompatibilityQuestionnaire() {
       userId: session?.id ?? draft.userId,
     });
     if (submitCheck) setBackgroundStatus("pending");
-    setOnboardingStep("swipe");
+    setOnboardingStep("done");
+    router.push("/discover");
   }
 
   function onAnimalSearch(e: FormEvent) {
@@ -409,7 +410,7 @@ export function CompatibilityQuestionnaire() {
               Skip for now
             </Button>
             <Button type="button" onClick={() => finish(true)}>
-              Submit check and continue
+              Submit check and see dogs
             </Button>
           </div>
         )}
