@@ -7,6 +7,7 @@ import {
   useEffect,
   useMemo,
   useState,
+  useSyncExternalStore,
   type ReactNode,
 } from "react";
 import { DEMO_ALEX_PREFERENCES, DEMO_DOGS, DEMO_SHELTERS } from "@/data/seed";
@@ -74,14 +75,27 @@ type DemoContextValue = DemoState & {
 
 const DemoContext = createContext<DemoContextValue | null>(null);
 
-export function DemoProvider({ children }: { children: ReactNode }) {
-  const [state, setState] = useState<DemoState>(emptyState);
-  const [hydrated, setHydrated] = useState(false);
+/** Client vs SSR flag without an effect (avoids setState-in-effect lint). */
+function useIsClient() {
+  return useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false,
+  );
+}
 
-  useEffect(() => {
+export function DemoProvider({ children }: { children: ReactNode }) {
+  const isClient = useIsClient();
+  const [state, setState] = useState<DemoState>(emptyState);
+  const [didLoad, setDidLoad] = useState(false);
+
+  // Hydrate from localStorage during render once we're on the client.
+  if (isClient && !didLoad) {
+    setDidLoad(true);
     setState(loadState());
-    setHydrated(true);
-  }, []);
+  }
+
+  const hydrated = isClient && didLoad;
 
   useEffect(() => {
     if (!hydrated) return;

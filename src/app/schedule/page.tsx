@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { Suspense, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { AppNav } from "@/components/layout/AppNav";
 import { Button } from "@/components/ui/Button";
@@ -28,10 +28,21 @@ function ScheduleInner() {
 
   const [slots, setSlots] = useState<SuggestedSlot[]>([]);
   const [selected, setSelected] = useState<string | null>(null);
-  const [interaction, setInteraction] = useState<InteractionType>("day_fostering");
+  const [interactionOverride, setInteractionOverride] =
+    useState<InteractionType | null>(null);
+  const [activeDogId, setActiveDogId] = useState(dogId);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null);
+
+  // When the selected dog changes, clear override so we use that dog's default type.
+  if (dogId !== activeDogId) {
+    setActiveDogId(dogId);
+    setInteractionOverride(null);
+  }
+
+  const interaction: InteractionType =
+    interactionOverride ?? dog?.interactionTypes[0] ?? "day_fostering";
 
   const upcoming = useMemo(
     () =>
@@ -40,12 +51,6 @@ function ScheduleInner() {
         .sort((a, b) => a.startsAt.localeCompare(b.startsAt)),
     [appointments, session?.id],
   );
-
-  useEffect(() => {
-    if (dog && dog.interactionTypes[0]) {
-      setInteraction(dog.interactionTypes[0]);
-    }
-  }, [dog]);
 
   async function loadSlots() {
     if (!session || !preferences || !dog) return;
@@ -176,7 +181,7 @@ function ScheduleInner() {
                   className="mt-1 w-full rounded-xl border border-[var(--line)] px-3 py-2"
                   value={interaction}
                   onChange={(e) =>
-                    setInteraction(e.target.value as InteractionType)
+                    setInteractionOverride(e.target.value as InteractionType)
                   }
                 >
                   {dog.interactionTypes.map((t) => (
