@@ -153,6 +153,21 @@ export interface SuggestedSlot {
   source: "mock" | "arcade";
 }
 
+export type OnboardingStep =
+  | "ask"
+  | "pick_dog"
+  | "around_dog"
+  | "availability"
+  | "swipe"
+  | "done";
+
+export interface OnboardingState {
+  step: OnboardingStep;
+  chosenDogId: string | null;
+  /** True after the user finishes the required companion swipe deck. */
+  swipeFinished: boolean;
+}
+
 export interface DemoState {
   session: Profile | null;
   preferences: UserPreferences | null;
@@ -164,4 +179,5 @@ export interface DemoState {
   activity: ActivityItem[];
   passedDogIds: string[];
   calendarMode: "mock" | "arcade";
+  onboarding: OnboardingState;
 }

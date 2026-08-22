@@ -251,6 +251,14 @@ export const DEMO_DOGS: Dog[] = [
   },
 ];
 
+export const WEEKDAY_9_TO_3: DayAvailability[] = [
+  { day: "monday", ranges: [{ start: "09:00", end: "15:00" }] },
+  { day: "tuesday", ranges: [{ start: "09:00", end: "15:00" }] },
+  { day: "wednesday", ranges: [{ start: "09:00", end: "15:00" }] },
+  { day: "thursday", ranges: [{ start: "09:00", end: "15:00" }] },
+  { day: "friday", ranges: [{ start: "09:00", end: "15:00" }] },
+];
+
 export const DEMO_ALEX_PREFERENCES: UserPreferences = {
   userId: "demo-alex",
   wfhSchedule: "Remote Mon–Fri, flexible afternoons after standup",
