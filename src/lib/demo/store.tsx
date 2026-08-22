@@ -191,7 +191,7 @@ function showEmailSentToast() {
   if (typeof window === "undefined") return;
   window.dispatchEvent(
     new CustomEvent("pawffice-email-toast", {
-      detail: { message: "Email sent!" },
+      detail: { message: "Email sent! Feedback request delivered." },
     }),
   );
 }
@@ -466,6 +466,77 @@ export function DemoProvider({ children }: { children: ReactNode }) {
           ],
         };
       });
+
+      if (appt.status === "pending" && typeof window !== "undefined") {
+        const approveDelay = 3 * 1000;
+        const completeDelay = approveDelay + 2 * 1000;
+
+        window.setTimeout(() => {
+          setState((s) => ({
+            ...s,
+            appointments: s.appointments.map((appointment) =>
+              appointment.id === full.id
+                ? { ...appointment, status: "approved" }
+                : appointment,
+            ),
+            activity: [
+              {
+                id: `act-${Date.now()}`,
+                userId: appt.userId,
+                message: `Visit approved for ${appt.userName ?? "your dog"}.`,
+                createdAt: new Date().toISOString(),
+              },
+              ...s.activity,
+            ],
+          }));
+        }, approveDelay);
+
+        window.setTimeout(() => {
+          setState((s) => {
+            const target = s.appointments.find((appointment) => appointment.id === full.id);
+            if (!target) return s;
+
+            const dog = s.dogs.find((item) => item.id === target.dogId);
+            const user = s.session ?? {
+              id: "demo-alex",
+              name: "Alex Rivera",
+              email: "alex@pawffice.demo",
+            };
+
+            void triggerArcadeEmail({
+              type: "visit-followup",
+              userId: user.id,
+              to: user.email,
+              dogName: dog?.name ?? "your dog companion",
+              dogId: target.dogId,
+              appointmentId: target.id,
+              appointmentDate: new Date(target.startsAt).toLocaleString(),
+              interactionType: interactionLabel(target.interactionType),
+              baseUrl:
+                typeof window !== "undefined" ? window.location.origin : undefined,
+            });
+
+            return {
+              ...s,
+              appointments: s.appointments.map((appointment) =>
+                appointment.id === full.id
+                  ? { ...appointment, status: "completed", reviewedAt: new Date().toISOString() }
+                  : appointment,
+              ),
+              activity: [
+                {
+                  id: `act-${Date.now()}`,
+                  userId: s.session?.id ?? "anon",
+                  message: "Visit completed — you can leave feedback now.",
+                  createdAt: new Date().toISOString(),
+                },
+                ...s.activity,
+              ],
+            };
+          });
+        }, completeDelay);
+      }
+
       return full;
     },
     [],
@@ -773,7 +844,6 @@ export function DemoProvider({ children }: { children: ReactNode }) {
       if (!s.session) return s;
       const basePrefs = s.preferences ?? blankUserPreferences(s.session.id);
       const availability = WEEKDAY_9_TO_3.filter((d) => days.includes(d.day));
-      const basePrefs = s.preferences ?? blankUserPreferences(s.session.id);
       return {
         ...s,
         preferences: {

@@ -73,9 +73,7 @@ export function AppNav() {
                 href={
                   session.role === "shelter"
                     ? "/shelter/dashboard"
-                    : preferences
-                      ? "/discover"
-                      : "/onboarding"
+                    : "/profile"
                 }
                 className="hidden text-sm text-[var(--ink-soft)] sm:inline"
               >

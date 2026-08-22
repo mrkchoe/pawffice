@@ -29,6 +29,8 @@ export default function ProfilePage() {
     session,
     preferences,
     backgroundCheck,
+    appointments,
+    dogs,
     setPreferences,
     setBackgroundStatus,
   } = useDemo();
@@ -45,6 +47,13 @@ export default function ProfilePage() {
   }
 
   const prefs = preferences;
+  const scheduledDogs = appointments
+    .filter((appointment) => appointment.userId === session.id)
+    .sort((a, b) => a.startsAt.localeCompare(b.startsAt))
+    .map((appointment) => ({
+      ...appointment,
+      dog: dogs.find((dog) => dog.id === appointment.dogId),
+    }));
 
   function update<K extends keyof UserPreferences>(
     key: K,
@@ -91,6 +100,55 @@ export default function ProfilePage() {
             {session.name} · {session.email} · {session.location}
           </p>
         </div>
+
+        <section className="rounded-3xl bg-white p-6 ring-1 ring-[var(--line)]">
+          <h2 className="font-display text-2xl">Your details</h2>
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            <div>
+              <p className="text-xs uppercase tracking-wide text-[var(--ink-soft)]">Name</p>
+              <p className="mt-1 font-medium">{session.name}</p>
+            </div>
+            <div>
+              <p className="text-xs uppercase tracking-wide text-[var(--ink-soft)]">Email</p>
+              <p className="mt-1 font-medium">{session.email}</p>
+            </div>
+            <div>
+              <p className="text-xs uppercase tracking-wide text-[var(--ink-soft)]">Location</p>
+              <p className="mt-1 font-medium">{session.location}</p>
+            </div>
+            <div>
+              <p className="text-xs uppercase tracking-wide text-[var(--ink-soft)]">Role</p>
+              <p className="mt-1 font-medium capitalize">{session.role}</p>
+            </div>
+          </div>
+        </section>
+
+        <section className="rounded-3xl bg-white p-6 ring-1 ring-[var(--line)]">
+          <h2 className="font-display text-2xl">Scheduled dogs</h2>
+          {scheduledDogs.length === 0 ? (
+            <p className="mt-3 text-sm text-[var(--ink-soft)]">
+              No scheduled visits yet. Once you request a walk or foster visit, it’ll appear here.
+            </p>
+          ) : (
+            <ul className="mt-4 space-y-3">
+              {scheduledDogs.map((appointment) => (
+                <li key={appointment.id} className="rounded-2xl border border-[var(--line)] bg-[var(--bg)] p-4">
+                  <div className="flex items-center justify-between gap-4">
+                    <div>
+                      <p className="font-medium text-[var(--ink)]">{appointment.dog?.name ?? "Dog"}</p>
+                      <p className="text-sm text-[var(--ink-soft)]">
+                        {new Date(appointment.startsAt).toLocaleString()} · {appointment.status}
+                      </p>
+                    </div>
+                    <span className="rounded-full bg-white px-2.5 py-1 text-xs capitalize ring-1 ring-[var(--line)]">
+                      {appointment.interactionType.replaceAll("_", " ")}
+                    </span>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
 
         <section
           id="background"
