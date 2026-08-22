@@ -415,11 +415,13 @@ export default function ShelterDashboardPage() {
 
         <div className="mt-8 grid gap-4 sm:grid-cols-3">
           <Stat label="Dogs checked out" value={dogsCheckedOut} />
-          <Stat
-            label="Requests"
-            value={DEMO_REQUEST_COUNT}
-            valueClassName="text-[#9a3412]"
-          />
+          <Link href="/shelter/requests" className="block rounded-3xl transition hover:ring-2 hover:ring-[var(--brand)]/40">
+            <Stat
+              label="Requests"
+              value={DEMO_REQUEST_COUNT}
+              valueClassName="text-[#9a3412]"
+            />
+          </Link>
           <Stat label="Upcoming visits" value={upcomingVisits.length} />
         </div>
 

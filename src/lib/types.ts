@@ -192,6 +192,7 @@ export type OnboardingStep =
   | "pick_dog"
   | "around_dog"
   | "availability"
+  | "questionnaire"
   | "swipe"
   | "done";
 

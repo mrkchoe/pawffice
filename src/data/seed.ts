@@ -487,6 +487,221 @@ export const DEMO_APPOINTMENTS: Appointment[] = [
   },
 ];
 
+/** Demo WFH users who have requested each dog (shelter profile view). */
+export interface DemoDogRequester {
+  userId: string;
+  name: string;
+  email: string;
+  requestedAt: string;
+  interest: string;
+}
+
+export const DEMO_DOG_REQUESTERS: Record<string, DemoDogRequester[]> = {
+  "dog-luna": [
+    {
+      userId: "demo-alex",
+      name: "Alex Rivera",
+      email: "alex@pawffice.demo",
+      requestedAt: "2026-08-20T12:00:00.000Z",
+      interest: "Day fostering",
+    },
+    {
+      userId: "demo-sam",
+      name: "Sam Chen",
+      email: "sam@pawffice.demo",
+      requestedAt: "2026-08-18T09:30:00.000Z",
+      interest: "Dog walking",
+    },
+    {
+      userId: "demo-casey",
+      name: "Casey Nguyen",
+      email: "casey@pawffice.demo",
+      requestedAt: "2026-08-16T15:00:00.000Z",
+      interest: "Day fostering",
+    },
+    {
+      userId: "demo-riley",
+      name: "Riley Morgan",
+      email: "riley@pawffice.demo",
+      requestedAt: "2026-08-14T11:20:00.000Z",
+      interest: "Trial visit",
+    },
+  ],
+  "dog-biscuit": [
+    {
+      userId: "demo-sam",
+      name: "Sam Chen",
+      email: "sam@pawffice.demo",
+      requestedAt: "2026-08-20T12:05:00.000Z",
+      interest: "Dog walking",
+    },
+    {
+      userId: "demo-alex",
+      name: "Alex Rivera",
+      email: "alex@pawffice.demo",
+      requestedAt: "2026-08-19T10:00:00.000Z",
+      interest: "Day fostering",
+    },
+    {
+      userId: "demo-jordan",
+      name: "Jordan Blake",
+      email: "jordan@pawffice.demo",
+      requestedAt: "2026-08-17T14:00:00.000Z",
+      interest: "Adoption interest",
+    },
+  ],
+  "dog-olive": [
+    {
+      userId: "demo-casey",
+      name: "Casey Nguyen",
+      email: "casey@pawffice.demo",
+      requestedAt: "2026-08-21T09:00:00.000Z",
+      interest: "Day fostering",
+    },
+    {
+      userId: "demo-riley",
+      name: "Riley Morgan",
+      email: "riley@pawffice.demo",
+      requestedAt: "2026-08-15T16:40:00.000Z",
+      interest: "Weekend fostering",
+    },
+  ],
+  "dog-milo": [
+    {
+      userId: "demo-jordan",
+      name: "Jordan Blake",
+      email: "jordan@pawffice.demo",
+      requestedAt: "2026-08-21T10:00:00.000Z",
+      interest: "Dog walking",
+    },
+    {
+      userId: "demo-sam",
+      name: "Sam Chen",
+      email: "sam@pawffice.demo",
+      requestedAt: "2026-08-13T12:00:00.000Z",
+      interest: "Day fostering",
+    },
+    {
+      userId: "demo-alex",
+      name: "Alex Rivera",
+      email: "alex@pawffice.demo",
+      requestedAt: "2026-08-12T08:15:00.000Z",
+      interest: "Weekend fostering",
+    },
+    {
+      userId: "demo-casey",
+      name: "Casey Nguyen",
+      email: "casey@pawffice.demo",
+      requestedAt: "2026-08-10T17:00:00.000Z",
+      interest: "Dog walking",
+    },
+  ],
+  "dog-pepper": [
+    {
+      userId: "demo-riley",
+      name: "Riley Morgan",
+      email: "riley@pawffice.demo",
+      requestedAt: "2026-08-22T08:00:00.000Z",
+      interest: "Day fostering",
+    },
+    {
+      userId: "demo-alex",
+      name: "Alex Rivera",
+      email: "alex@pawffice.demo",
+      requestedAt: "2026-08-19T13:00:00.000Z",
+      interest: "Dog walking",
+    },
+  ],
+  "dog-harbor": [
+    {
+      userId: "demo-alex",
+      name: "Alex Rivera",
+      email: "alex@pawffice.demo",
+      requestedAt: "2026-08-22T11:00:00.000Z",
+      interest: "Trial adoption",
+    },
+    {
+      userId: "demo-casey",
+      name: "Casey Nguyen",
+      email: "casey@pawffice.demo",
+      requestedAt: "2026-08-18T09:00:00.000Z",
+      interest: "Adoption interest",
+    },
+    {
+      userId: "demo-jordan",
+      name: "Jordan Blake",
+      email: "jordan@pawffice.demo",
+      requestedAt: "2026-08-11T15:30:00.000Z",
+      interest: "Day fostering",
+    },
+  ],
+  "dog-nova": [
+    {
+      userId: "demo-jordan",
+      name: "Jordan Blake",
+      email: "jordan@pawffice.demo",
+      requestedAt: "2026-08-21T18:00:00.000Z",
+      interest: "Dog walking",
+    },
+  ],
+  "dog-duke": [
+    {
+      userId: "demo-riley",
+      name: "Riley Morgan",
+      email: "riley@pawffice.demo",
+      requestedAt: "2026-08-20T07:45:00.000Z",
+      interest: "Weekend fostering",
+    },
+    {
+      userId: "demo-sam",
+      name: "Sam Chen",
+      email: "sam@pawffice.demo",
+      requestedAt: "2026-08-16T11:00:00.000Z",
+      interest: "Trial adoption",
+    },
+  ],
+};
+
+/** Pending background checks for shelter review demos. */
+export const DEMO_BACKGROUND_CHECKS: {
+  userId: string;
+  name: string;
+  email: string;
+  status: "pending" | "approved" | "rejected";
+  submittedAt: string;
+  notes?: string;
+}[] = [
+  {
+    userId: "demo-alex",
+    name: "Alex Rivera",
+    email: "alex@pawffice.demo",
+    status: "pending",
+    submittedAt: "2026-08-21T14:20:00.000Z",
+    notes: "Mock Checkr clear — demo approved record",
+  },
+  {
+    userId: "demo-sam",
+    name: "Sam Chen",
+    email: "sam@pawffice.demo",
+    status: "pending",
+    submittedAt: "2026-08-20T09:10:00.000Z",
+  },
+  {
+    userId: "demo-casey",
+    name: "Casey Nguyen",
+    email: "casey@pawffice.demo",
+    status: "pending",
+    submittedAt: "2026-08-19T16:45:00.000Z",
+  },
+  {
+    userId: "demo-riley",
+    name: "Riley Morgan",
+    email: "riley@pawffice.demo",
+    status: "pending",
+    submittedAt: "2026-08-18T11:00:00.000Z",
+  },
+];
+
 export const WEEKDAY_9_TO_3: DayAvailability[] = [
   { day: "monday", ranges: [{ start: "09:00", end: "15:00" }] },
   { day: "tuesday", ranges: [{ start: "09:00", end: "15:00" }] },
@@ -514,6 +729,71 @@ export const DEMO_ALEX_PREFERENCES: UserPreferences = {
   temperamentPreferences: ["gentle", "apartment-friendly", "curious"],
   mustBeGoodWith: [],
   maxDistanceMiles: 15,
+};
+
+/** Compatibility survey answers shown when reviewing a background check. */
+export const DEMO_SURVEY_RESPONSES: Record<string, UserPreferences> = {
+  "demo-alex": DEMO_ALEX_PREFERENCES,
+  "demo-sam": {
+    userId: "demo-sam",
+    wfhSchedule: "Hybrid — home Tue/Thu/Fri",
+    availability: [
+      { day: "tuesday", ranges: [{ start: "10:00", end: "16:00" }] },
+      { day: "thursday", ranges: [{ start: "10:00", end: "16:00" }] },
+      { day: "friday", ranges: [{ start: "09:00", end: "15:00" }] },
+    ],
+    housingType: "condo",
+    petsAllowed: true,
+    hasYard: false,
+    dogExperience: "experienced",
+    preferredSize: "small",
+    preferredEnergy: "low",
+    maxExerciseMinutes: 45,
+    interestedIn: ["dog_walking", "day_fostering"],
+    temperamentPreferences: ["calm", "gentle", "apartment-friendly"],
+    mustBeGoodWith: ["cats"],
+    maxDistanceMiles: 10,
+  },
+  "demo-casey": {
+    userId: "demo-casey",
+    wfhSchedule: "Fully remote, flexible mornings",
+    availability: [
+      { day: "monday", ranges: [{ start: "08:00", end: "14:00" }] },
+      { day: "wednesday", ranges: [{ start: "08:00", end: "14:00" }] },
+      { day: "saturday", ranges: [{ start: "09:00", end: "17:00" }] },
+    ],
+    housingType: "house",
+    petsAllowed: true,
+    hasYard: true,
+    dogExperience: "some",
+    preferredSize: "medium",
+    preferredEnergy: "medium",
+    maxExerciseMinutes: 75,
+    interestedIn: ["day_fostering", "weekend_fostering", "adoption"],
+    temperamentPreferences: ["playful", "curious", "snuggly"],
+    mustBeGoodWith: ["kids"],
+    maxDistanceMiles: 20,
+  },
+  "demo-riley": {
+    userId: "demo-riley",
+    wfhSchedule: "Office Mon/Wed, remote otherwise",
+    availability: [
+      { day: "tuesday", ranges: [{ start: "12:00", end: "18:00" }] },
+      { day: "thursday", ranges: [{ start: "12:00", end: "18:00" }] },
+      { day: "sunday", ranges: [{ start: "10:00", end: "15:00" }] },
+    ],
+    housingType: "apartment",
+    petsAllowed: true,
+    hasYard: false,
+    dogExperience: "none",
+    preferredSize: "no_preference",
+    preferredEnergy: "high",
+    maxExerciseMinutes: 90,
+    interestedIn: ["weekend_fostering", "trial_adoption"],
+    temperamentPreferences: ["athletic", "playful"],
+    mustBeGoodWith: ["strangers"],
+    maxDistanceMiles: 15,
+  },
 };
 
 /** Starting answers for the compatibility questionnaire (not Alex's shortcut profile). */

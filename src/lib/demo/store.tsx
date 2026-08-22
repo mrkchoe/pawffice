@@ -17,6 +17,7 @@ import {
   DEMO_SHELTERS,
   LEGACY_SHELTER_IDS,
   WEEKDAY_9_TO_3,
+  blankUserPreferences,
 } from "@/data/seed";
 import type {
   ActivityItem,
@@ -539,6 +540,7 @@ export function DemoProvider({ children }: { children: ReactNode }) {
       if (!s.session) return s;
       const basePrefs = s.preferences ?? blankUserPreferences(s.session.id);
       const availability = WEEKDAY_9_TO_3.filter((d) => days.includes(d.day));
+      const basePrefs = s.preferences ?? blankUserPreferences(s.session.id);
       return {
         ...s,
         preferences: {
@@ -548,15 +550,14 @@ export function DemoProvider({ children }: { children: ReactNode }) {
         },
         onboarding: {
           ...s.onboarding,
-          step: "swipe",
+          step: "questionnaire",
           swipeFinished: false,
         },
-        passedDogIds: [],
         activity: [
           {
             id: `act-${Date.now()}`,
             userId: s.session.id,
-            message: "Saved 9am–3pm weekday availability — start swiping",
+            message: "Saved 9am–3pm weekday availability — start compatibility survey",
             createdAt: new Date().toISOString(),
           },
           ...s.activity,

@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AppNav } from "@/components/layout/AppNav";
 import { CompanionSwipe } from "@/components/dogs/CompanionSwipe";
@@ -60,6 +60,12 @@ export default function OnboardingPage() {
     : undefined;
   const shelter = chosenDog ? getShelter(chosenDog.shelterId) : undefined;
 
+  useEffect(() => {
+    if (hydrated && session?.role === "wfh" && onboarding.step === "done") {
+      router.replace("/discover");
+    }
+  }, [hydrated, session, onboarding.step, router]);
+
   if (!hydrated) {
     return (
       <div className="min-h-screen">
@@ -103,25 +109,7 @@ export default function OnboardingPage() {
     return (
       <div className="min-h-screen">
         <AppNav />
-        <div className="mx-auto max-w-lg px-4 py-16 text-center">
-          <h1 className="font-display text-3xl">You&apos;re set</h1>
-          <p className="mt-2 text-[var(--ink-soft)]">
-            Head to Matches or Discover anytime.
-          </p>
-          <div className="mt-6 flex flex-wrap justify-center gap-3">
-            <Button onClick={() => router.push("/matches")}>View matches</Button>
-            <Button variant="secondary" onClick={() => router.push("/dashboard")}>
-              Dashboard
-            </Button>
-          </div>
-          <button
-            type="button"
-            className="mt-8 text-sm text-[var(--ink-soft)] underline"
-            onClick={() => setOnboardingStep("ask")}
-          >
-            Restart this flow
-          </button>
-        </div>
+        <p className="p-8 text-[var(--ink-soft)]">Opening companion finder…</p>
       </div>
     );
   }
@@ -317,7 +305,7 @@ export default function OnboardingPage() {
                 disabled={selectedDays.length === 0}
                 onClick={() => applyWeekdayAvailability(selectedDays)}
               >
-                Continue to companion swipe
+                Continue
               </Button>
               <Button
                 variant="ghost"
@@ -328,6 +316,10 @@ export default function OnboardingPage() {
               </Button>
             </div>
           </section>
+        )}
+
+        {onboarding.step === "questionnaire" && (
+          <CompatibilityQuestionnaire />
         )}
 
         {onboarding.step === "swipe" && (
@@ -352,7 +344,7 @@ export default function OnboardingPage() {
                 required
                 onComplete={() => {
                   finishSwipeOnboarding();
-                  router.push("/matches");
+                  router.push("/discover");
                 }}
               />
             </div>

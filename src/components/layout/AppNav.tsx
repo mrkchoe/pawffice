@@ -16,13 +16,19 @@ const ICON_ON_BRAND = "#feffff";
 export function AppNav() {
   const pathname = usePathname();
   const { session, preferences, logout } = useDemo();
-  const wfhReady = session?.role === "wfh" && Boolean(preferences);
+  const wfhNav = session?.role === "wfh";
 
   return (
     <header className="sticky top-0 z-40 border-b border-[var(--line)]/80 bg-[var(--bg)]/85 backdrop-blur-md">
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3">
         <Link
-          href={session?.role === "shelter" ? "/shelter/dashboard" : "/"}
+          href={
+            session?.role === "shelter"
+              ? "/shelter/dashboard"
+              : session
+                ? "/discover"
+                : "/"
+          }
           className="flex items-center gap-2"
         >
           <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[var(--brand)] shadow-sm">
@@ -33,7 +39,7 @@ export function AppNav() {
           </span>
         </Link>
 
-        {wfhReady && (
+        {wfhNav && (
           <nav className="hidden items-center gap-1 md:flex">
             {links.map(({ href, label, icon: Icon }) => {
               const active = pathname.startsWith(href);
@@ -68,7 +74,7 @@ export function AppNav() {
                   session.role === "shelter"
                     ? "/shelter/dashboard"
                     : preferences
-                      ? "/dashboard"
+                      ? "/discover"
                       : "/onboarding"
                 }
                 className="hidden text-sm text-[var(--ink-soft)] sm:inline"
@@ -94,7 +100,7 @@ export function AppNav() {
         </div>
       </div>
 
-      {wfhReady && (
+      {wfhNav && (
         <nav className="flex gap-1 overflow-x-auto border-t border-[var(--line)]/60 px-2 py-2 md:hidden">
           {links.map(({ href, label, icon: Icon }) => {
             const active = pathname.startsWith(href);

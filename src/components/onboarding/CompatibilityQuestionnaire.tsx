@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/Button";
 import { blankUserPreferences } from "@/data/seed";
 import { useDemo } from "@/lib/demo/store";
 import type {
-  DayOfWeek,
   EnergyPreference,
   HousingType,
   InteractionType,
@@ -17,20 +16,15 @@ import type {
 
 const STEPS = [
   { title: "Your home", blurb: "We’ll match dogs that fit your space." },
-  { title: "Dog fit", blurb: "Size, energy, and the kind of time you want to spend." },
-  { title: "Your week", blurb: "Overlapping availability is 20% of the match score." },
-  { title: "Background check", blurb: "A mock Checkr step before you can book a visit." },
+  {
+    title: "Dog fit",
+    blurb: "Size, energy, and the kind of time you want to spend.",
+  },
+  {
+    title: "Background check",
+    blurb: "A mock Checkr step before you can book a visit.",
+  },
 ] as const;
-
-const DAYS: DayOfWeek[] = [
-  "monday",
-  "tuesday",
-  "wednesday",
-  "thursday",
-  "friday",
-  "saturday",
-  "sunday",
-];
 
 const TEMPERAMENTS = [
   "gentle",
@@ -58,13 +52,24 @@ const SIZE_OPTIONS: {
   { value: "small", label: "Small", hint: "Under 25 lbs", iconClass: "h-7 w-7" },
   { value: "medium", label: "Medium", hint: "25–55 lbs", iconClass: "h-10 w-10" },
   { value: "large", label: "Large", hint: "55+ lbs", iconClass: "h-14 w-14" },
-  { value: "no_preference", label: "Any size", hint: "No preference", iconClass: "h-9 w-9" },
+  {
+    value: "no_preference",
+    label: "Any size",
+    hint: "No preference",
+    iconClass: "h-9 w-9",
+  },
 ];
 
 export function CompatibilityQuestionnaire() {
   const router = useRouter();
-  const { session, preferences, setPreferences, setBackgroundStatus, dogs } =
-    useDemo();
+  const {
+    session,
+    preferences,
+    setPreferences,
+    setBackgroundStatus,
+    setOnboardingStep,
+    dogs,
+  } = useDemo();
   const [step, setStep] = useState(0);
   const [animalQuery, setAnimalQuery] = useState("");
   const [draft, setDraft] = useState<UserPreferences>(
@@ -84,23 +89,17 @@ export function CompatibilityQuestionnaire() {
       .slice(0, 6);
   }, [animalQuery, dogs]);
 
-  function update<K extends keyof UserPreferences>(key: K, value: UserPreferences[K]) {
+  function update<K extends keyof UserPreferences>(
+    key: K,
+    value: UserPreferences[K],
+  ) {
     setDraft((d) => ({ ...d, [key]: value, userId: session?.id ?? d.userId }));
   }
 
-  function toggleDay(day: DayOfWeek) {
-    setDraft((d) => {
-      const exists = d.availability.some((a) => a.day === day);
-      return {
-        ...d,
-        availability: exists
-          ? d.availability.filter((a) => a.day !== day)
-          : [...d.availability, { day, ranges: [{ start: "12:00", end: "17:00" }] }],
-      };
-    });
-  }
-
-  function toggleChip<T extends string>(key: "temperamentPreferences" | "interestedIn", value: T) {
+  function toggleChip<T extends string>(
+    key: "temperamentPreferences" | "interestedIn",
+    value: T,
+  ) {
     setDraft((d) => {
       const list = d[key] as T[];
       const has = list.includes(value);
@@ -111,11 +110,20 @@ export function CompatibilityQuestionnaire() {
     });
   }
 
-  const canAdvance =
-    step === 2 ? draft.availability.length > 0 : step === 1 ? draft.interestedIn.length > 0 : true;
+  const canAdvance = step === 1 ? draft.interestedIn.length > 0 : true;
+  const lastStep = STEPS.length - 1;
 
   function finish(submitCheck: boolean) {
-    setPreferences(draft);
+    setPreferences({
+      ...draft,
+      // Keep weekday availability already chosen in the prior step.
+      availability:
+        preferences?.availability?.length
+          ? preferences.availability
+          : draft.availability,
+      wfhSchedule: preferences?.wfhSchedule || draft.wfhSchedule,
+      userId: session?.id ?? draft.userId,
+    });
     if (submitCheck) setBackgroundStatus("pending");
     // Stay in onboarding so the dog-in-mind / availability flow can run next.
     router.push("/onboarding");
@@ -129,7 +137,7 @@ export function CompatibilityQuestionnaire() {
   }
 
   return (
-    <div className="mx-auto max-w-2xl px-4 py-12">
+    <div className="mx-auto max-w-2xl">
       <form onSubmit={onAnimalSearch} className="relative">
         <label className="sr-only" htmlFor="animal-search">
           Search by animal ID or name
@@ -211,7 +219,9 @@ export function CompatibilityQuestionnaire() {
               <select
                 className="mt-1 w-full rounded-xl border border-[var(--line)] px-3 py-2"
                 value={draft.housingType}
-                onChange={(e) => update("housingType", e.target.value as HousingType)}
+                onChange={(e) =>
+                  update("housingType", e.target.value as HousingType)
+                }
               >
                 <option value="apartment">Apartment</option>
                 <option value="condo">Condo</option>
@@ -259,16 +269,18 @@ export function CompatibilityQuestionnaire() {
         {step === 1 && (
           <div className="space-y-5">
             <fieldset>
-              <legend className="text-sm text-[var(--ink-soft)]">Preferred size</legend>
-              <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
+              <legend className="text-sm text-[var(--ink-soft)]">
+                Preferred size
+              </legend>
+              <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
                 {SIZE_OPTIONS.map((opt) => (
                   <SizeTile
                     key={opt.value}
                     selected={draft.preferredSize === opt.value}
+                    onClick={() => update("preferredSize", opt.value)}
                     label={opt.label}
                     hint={opt.hint}
                     iconClass={opt.iconClass}
-                    onClick={() => update("preferredSize", opt.value)}
                   />
                 ))}
               </div>
@@ -282,26 +294,45 @@ export function CompatibilityQuestionnaire() {
                   update("preferredEnergy", e.target.value as EnergyPreference)
                 }
               >
+                <option value="low">Low</option>
+                <option value="medium">Medium</option>
+                <option value="high">High</option>
                 <option value="no_preference">No preference</option>
-                <option value="low">Low — desk-side naps</option>
-                <option value="medium">Medium — afternoon walks</option>
-                <option value="high">High — trail energy</option>
               </select>
             </label>
             <label className="block text-sm">
-              Max daily exercise ({draft.maxExerciseMinutes} min)
+              Max exercise minutes / day
               <input
-                type="range"
+                type="number"
                 min={15}
-                max={120}
-                step={5}
-                className="mt-2 w-full"
+                max={180}
+                step={15}
+                className="mt-1 w-full rounded-xl border border-[var(--line)] px-3 py-2"
                 value={draft.maxExerciseMinutes}
-                onChange={(e) => update("maxExerciseMinutes", Number(e.target.value))}
+                onChange={(e) =>
+                  update("maxExerciseMinutes", Number(e.target.value))
+                }
               />
             </label>
+            <label className="block text-sm">
+              Max distance to a shelter
+              <select
+                className="mt-1 w-full rounded-xl border border-[var(--line)] px-3 py-2"
+                value={draft.maxDistanceMiles}
+                onChange={(e) =>
+                  update("maxDistanceMiles", Number(e.target.value))
+                }
+              >
+                <option value={5}>Within 5 miles</option>
+                <option value={10}>Within 10 miles</option>
+                <option value={15}>Within 15 miles</option>
+                <option value={25}>Within 25 miles</option>
+              </select>
+            </label>
             <fieldset>
-              <legend className="text-sm text-[var(--ink-soft)]">Temperament</legend>
+              <legend className="text-sm text-[var(--ink-soft)]">
+                Temperament
+              </legend>
               <div className="mt-2 flex flex-wrap gap-2">
                 {TEMPERAMENTS.map((t) => (
                   <Chip
@@ -339,63 +370,14 @@ export function CompatibilityQuestionnaire() {
         )}
 
         {step === 2 && (
-          <div className="space-y-5">
-            <fieldset>
-              <legend className="text-sm text-[var(--ink-soft)]">
-                Days you can host or walk (afternoons by default)
-              </legend>
-              <div className="mt-2 flex flex-wrap gap-2">
-                {DAYS.map((day) => (
-                  <Chip
-                    key={day}
-                    selected={draft.availability.some((a) => a.day === day)}
-                    onClick={() => toggleDay(day)}
-                  >
-                    {day.slice(0, 3)}
-                  </Chip>
-                ))}
-              </div>
-              {draft.availability.length === 0 && (
-                <p className="mt-2 text-xs text-[var(--danger)]">
-                  Select at least one available day.
-                </p>
-              )}
-            </fieldset>
-            <label className="block text-sm">
-              WFH rhythm
-              <textarea
-                className="mt-1 w-full rounded-xl border border-[var(--line)] px-3 py-2"
-                rows={2}
-                placeholder="e.g. Remote weekdays, free after 12pm standup"
-                value={draft.wfhSchedule}
-                onChange={(e) => update("wfhSchedule", e.target.value)}
-              />
-            </label>
-            <label className="block text-sm">
-              Max distance to a shelter
-              <select
-                className="mt-1 w-full rounded-xl border border-[var(--line)] px-3 py-2"
-                value={draft.maxDistanceMiles}
-                onChange={(e) => update("maxDistanceMiles", Number(e.target.value))}
-              >
-                <option value={5}>Within 5 miles</option>
-                <option value={10}>Within 10 miles</option>
-                <option value={15}>Within 15 miles</option>
-                <option value={25}>Within 25 miles</option>
-              </select>
-            </label>
-          </div>
-        )}
-
-        {step === 3 && (
           <div className="space-y-4 text-sm text-[var(--ink-soft)]">
             <p>
               Shelters require a background check before a visit is booked. This
               demo uses a mock Checkr flow — nothing is sent to a real vendor.
             </p>
             <p>
-              You can submit now (status: pending) or browse matches first and
-              approve later from Profile.
+              You can submit now (status: pending) or continue and approve later
+              from Profile.
             </p>
           </div>
         )}
@@ -410,17 +392,25 @@ export function CompatibilityQuestionnaire() {
         >
           Back
         </Button>
-        {step < 3 ? (
-          <Button type="button" disabled={!canAdvance} onClick={() => setStep((s) => s + 1)}>
+        {step < lastStep ? (
+          <Button
+            type="button"
+            disabled={!canAdvance}
+            onClick={() => setStep((s) => s + 1)}
+          >
             Continue
           </Button>
         ) : (
           <div className="flex flex-wrap gap-2">
-            <Button variant="secondary" type="button" onClick={() => finish(false)}>
+            <Button
+              variant="secondary"
+              type="button"
+              onClick={() => finish(false)}
+            >
               Skip for now
             </Button>
             <Button type="button" onClick={() => finish(true)}>
-              Submit check and continue
+              Submit check and see dogs
             </Button>
           </div>
         )}
