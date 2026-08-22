@@ -1,4 +1,11 @@
-﻿import Arcade from "@arcadeai/arcadejs";
+import Arcade from "@arcadeai/arcadejs";
+
+import type {
+  CalendarAuthResult,
+  EmailProvider,
+  EmailSendInput,
+  EmailSendResult,
+} from "./types";
 
 export type ArcadeEmailPayload = {
   userId: string;
@@ -24,9 +31,7 @@ export function buildDashboardFeedbackLink(
   } = {},
 ) {
   const baseUrl =
-    options.baseUrl ??
-    process.env.NEXT_PUBLIC_APP_URL ??
-    "http://localhost:3000";
+    options.baseUrl ?? process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
   const url = new URL("/dashboard", baseUrl);
   url.hash = "visit-feedback";
@@ -66,8 +71,7 @@ export async function sendArcadeEmail(
       sent: false,
       status: "auth_required",
       authUrl: authResult.url ?? undefined,
-      message:
-        "Arcade Google authorization is required before sending email.",
+      message: "Arcade Google authorization is required before sending email.",
     };
   }
 
@@ -101,11 +105,9 @@ export async function sendArcadeEmail(
   }
 }
 
-import type { CalendarAuthResult, EmailProvider, EmailSendInput, EmailSendResult } from "./types";
-
 export class MockEmailProvider implements EmailProvider {
-  async ensureAuthorized() {
-    return { authorized: true as const };
+  async ensureAuthorized(): Promise<CalendarAuthResult> {
+    return { authorized: true };
   }
 
   async sendEmail(input: EmailSendInput): Promise<EmailSendResult> {
@@ -129,15 +131,15 @@ export class ArcadeEmailProvider implements EmailProvider {
     this.userId = userId;
   }
 
-  async ensureAuthorized(userId = this.userId): Promise<CalendarAuthResult> {
-    const authResponse = await this.client.auth.start(userId, "google", {
+  async ensureAuthorized(arcadeUserId = this.userId): Promise<CalendarAuthResult> {
+    const auth = await this.client.auth.start(arcadeUserId, "google", {
       scopes: ["https://www.googleapis.com/auth/gmail.send"],
     });
 
-    if (authResponse.status !== "completed") {
+    if (auth.status !== "completed") {
       return {
         authorized: false,
-        authUrl: authResponse.url ?? undefined,
+        authUrl: auth.url ?? undefined,
       };
     }
 
@@ -145,12 +147,12 @@ export class ArcadeEmailProvider implements EmailProvider {
   }
 
   async sendEmail(input: EmailSendInput): Promise<EmailSendResult> {
-    const auth = await this.ensureAuthorized(this.userId);
+    const auth = await this.ensureAuthorized();
     if (!auth.authorized) {
-      throw new Error(auth.authUrl ?? "Arcade email authorization required");
+      throw new Error("Arcade Gmail authorization is required.");
     }
 
-    const response = await this.client.tools.execute({
+    const result = await this.client.tools.execute({
       tool_name: "Gmail.SendEmail",
       user_id: this.userId,
       input: {
@@ -161,9 +163,7 @@ export class ArcadeEmailProvider implements EmailProvider {
     });
 
     return {
-      id: typeof response === "object" && response && "id" in response
-        ? String((response as { id?: string }).id ?? `arcade-email-${Date.now()}`)
-        : `arcade-email-${Date.now()}`,
+      id: typeof result?.id === "string" ? result.id : `arcade-email-${Date.now()}`,
       provider: "arcade",
     };
   }
