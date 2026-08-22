@@ -197,4 +197,5 @@ export interface DemoState {
   passedDogIds: string[];
   calendarMode: "mock" | "arcade";
   liabilityWaiver: LiabilityWaiver | null;
+  onboarding: OnboardingState;
 }

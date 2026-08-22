@@ -1,7 +1,7 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
-import { Suspense } from "react";
+import { Suspense, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { AppNav } from "@/components/layout/AppNav";
 import { Button } from "@/components/ui/Button";
@@ -11,13 +11,26 @@ function DemoInner() {
   const router = useRouter();
   const params = useSearchParams();
   const preferShelter = params.get("role") === "shelter";
-  const { loginAsAlex, loginAsShelter, setBackgroundStatus, resetDemo } =
+  const { loginAsAlex, loginAsShelter, resetDemo, session, hydrated } =
     useDemo();
+  const shelterAutoLoginStarted = useRef(false);
 
-  function startAsAlex(approve: boolean) {
-    loginAsAlex();
-    if (approve) setBackgroundStatus("approved");
-    router.push("/onboarding");
+  // "I'm a Shelter" → skip the Alex/shelter chooser and go straight in.
+  useEffect(() => {
+    if (!preferShelter || !hydrated || shelterAutoLoginStarted.current) return;
+    shelterAutoLoginStarted.current = true;
+    if (session?.role !== "shelter") {
+      loginAsShelter();
+    }
+    router.replace("/shelter/dashboard");
+  }, [preferShelter, hydrated, session?.role, loginAsShelter, router]);
+
+  if (preferShelter) {
+    return (
+      <div className="mx-auto max-w-3xl px-4 py-12">
+        <p className="text-[var(--ink-soft)]">Signing you in as shelter…</p>
+      </div>
+    );
   }
 
   return (
@@ -60,11 +73,7 @@ function DemoInner() {
           </Button>
         </div>
 
-        <div
-          className={`rounded-3xl bg-white p-6 ring-1 ${
-            preferShelter ? "ring-[var(--brand)]" : "ring-[var(--line)]"
-          }`}
-        >
+        <div className="rounded-3xl bg-white p-6 ring-1 ring-[var(--line)]">
           <h2 className="font-display text-2xl">Shelter staff</h2>
           <p className="mt-2 text-sm text-[var(--ink-soft)]">
             Manage Bayview & Oakridge dogs, see interest, and upcoming visits.

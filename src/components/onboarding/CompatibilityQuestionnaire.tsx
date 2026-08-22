@@ -117,7 +117,8 @@ export function CompatibilityQuestionnaire() {
   function finish(submitCheck: boolean) {
     setPreferences(draft);
     if (submitCheck) setBackgroundStatus("pending");
-    router.push("/discover");
+    // Stay in onboarding so the dog-in-mind / availability flow can run next.
+    router.push("/onboarding");
   }
 
   function onAnimalSearch(e: FormEvent) {
@@ -419,7 +420,7 @@ export function CompatibilityQuestionnaire() {
               Skip for now
             </Button>
             <Button type="button" onClick={() => finish(true)}>
-              Submit check and see matches
+              Submit check and continue
             </Button>
           </div>
         )}

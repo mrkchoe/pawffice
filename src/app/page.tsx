@@ -25,10 +25,27 @@ export default function LandingPage() {
               and schedule — then find a time to meet automatically.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
-              <ButtonLink href={session ? (preferences ? "/discover" : "/onboarding") : "/demo"}>
+              <ButtonLink
+                href={
+                  session?.role === "shelter"
+                    ? "/shelter/dashboard"
+                    : session
+                      ? preferences
+                        ? "/discover"
+                        : "/onboarding"
+                      : "/demo"
+                }
+              >
                 Find My Match
               </ButtonLink>
-              <ButtonLink href={session?.role === "shelter" ? "/shelter/dashboard" : "/demo?role=shelter"} variant="secondary">
+              <ButtonLink
+                href={
+                  session?.role === "shelter"
+                    ? "/shelter/dashboard"
+                    : "/demo?role=shelter"
+                }
+                variant="secondary"
+              >
                 I&apos;m a Shelter
               </ButtonLink>
             </div>

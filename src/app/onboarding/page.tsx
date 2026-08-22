@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AppNav } from "@/components/layout/AppNav";
 import { CompanionSwipe } from "@/components/dogs/CompanionSwipe";
+import { CompatibilityQuestionnaire } from "@/components/onboarding/CompatibilityQuestionnaire";
 import { Button } from "@/components/ui/Button";
 import { calculateDogMatch } from "@/lib/matching/calculateDogMatch";
 import { useDemo } from "@/lib/demo/store";
@@ -84,6 +85,16 @@ export default function OnboardingPage() {
             Log in as Alex
           </Button>
         </div>
+      </div>
+    );
+  }
+
+  // New accounts fill the questionnaire before dog-in-mind / swipe.
+  if (!preferences && onboarding.step === "ask") {
+    return (
+      <div className="min-h-screen pb-16">
+        <AppNav />
+        <CompatibilityQuestionnaire />
       </div>
     );
   }

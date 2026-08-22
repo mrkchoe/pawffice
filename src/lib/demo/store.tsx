@@ -10,7 +10,7 @@ import {
   useSyncExternalStore,
   type ReactNode,
 } from "react";
-import { DEMO_ALEX_PREFERENCES, DEMO_DOGS, DEMO_SHELTERS, WEEKDAY_9_TO_3 } from "@/data/seed";
+import { DEMO_ALEX_PREFERENCES, DEMO_DOGS, DEMO_SHELTERS, WEEKDAY_9_TO_3, blankUserPreferences } from "@/data/seed";
 import type {
   ActivityItem,
   Appointment,
@@ -51,6 +51,7 @@ function emptyState(): DemoState {
     passedDogIds: [],
     calendarMode: "mock",
     liabilityWaiver: null,
+    onboarding: defaultOnboarding(),
   };
 }
 
@@ -421,11 +422,14 @@ export function DemoProvider({ children }: { children: ReactNode }) {
   const chooseDogInMind = useCallback((dogId: string) => {
     setState((s) => {
       const dog = s.dogs.find((d) => d.id === dogId);
-      if (!dog || !s.session || !s.preferences) return s;
+      if (!dog || !s.session) return s;
+
+      const basePrefs =
+        s.preferences ?? blankUserPreferences(s.session.id);
 
       // User works around the dog's windows — mirror dog availability onto prefs.
       const prefs: UserPreferences = {
-        ...s.preferences,
+        ...basePrefs,
         availability: dog.availability as DayAvailability[],
         wfhSchedule: `Scheduling around ${dog.name}'s shelter availability`,
       };
@@ -466,35 +470,38 @@ export function DemoProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const chooseNoDogInMind = useCallback(() => {
-    setState((s) => ({
-      ...s,
-      onboarding: {
-        step: "availability",
-        chosenDogId: null,
-        swipeFinished: false,
-      },
-      activity: s.session
-        ? [
-            {
-              id: `act-${Date.now()}`,
-              userId: s.session.id,
-              message: "No dog in mind — setting weekday availability",
-              createdAt: new Date().toISOString(),
-            },
-            ...s.activity,
-          ]
-        : s.activity,
-    }));
+    setState((s) => {
+      if (!s.session) return s;
+      return {
+        ...s,
+        preferences: s.preferences ?? blankUserPreferences(s.session.id),
+        onboarding: {
+          step: "availability",
+          chosenDogId: null,
+          swipeFinished: false,
+        },
+        activity: [
+          {
+            id: `act-${Date.now()}`,
+            userId: s.session.id,
+            message: "No dog in mind — setting weekday availability",
+            createdAt: new Date().toISOString(),
+          },
+          ...s.activity,
+        ],
+      };
+    });
   }, []);
 
   const applyWeekdayAvailability = useCallback((days: DayOfWeek[]) => {
     setState((s) => {
-      if (!s.preferences || !s.session) return s;
+      if (!s.session) return s;
+      const basePrefs = s.preferences ?? blankUserPreferences(s.session.id);
       const availability = WEEKDAY_9_TO_3.filter((d) => days.includes(d.day));
       return {
         ...s,
         preferences: {
-          ...s.preferences,
+          ...basePrefs,
           availability,
           wfhSchedule: "Available weekdays 9am–3pm (selected days)",
         },
