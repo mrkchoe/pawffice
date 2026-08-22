@@ -19,6 +19,10 @@ import { CaretLeft, CaretRight, Lock, Plus, UploadSimple } from "@phosphor-icons
 import { AppNav } from "@/components/layout/AppNav";
 import { Button } from "@/components/ui/Button";
 import { interactionLabel, useDemo } from "@/lib/demo/store";
+import {
+  getSavedShelterArcadeUserId,
+  promptForShelterArcadeUserId,
+} from "@/lib/arcade/shelterUser";
 import type {
   Appointment,
   Dog,
@@ -64,6 +68,10 @@ export default function ShelterDashboardPage() {
     savedDogs,
     upsertDog,
     removeDog,
+    updateAppointment,
+    updateShelter,
+    calendarMode,
+    setCalendarMode,
   } = useDemo();
 
   const [nowMs, setNowMs] = useState<number | null>(null);
@@ -72,6 +80,9 @@ export default function ShelterDashboardPage() {
   const [editing, setEditing] = useState<Dog | null>(null);
   const [uploadNotice, setUploadNotice] = useState<string | null>(null);
   const [dogSort, setDogSort] = useState<DogListSort>("a_z");
+  const [authUrl, setAuthUrl] = useState<string | null>(null);
+  const [statusMsg, setStatusMsg] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
   const importProfileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -84,6 +95,17 @@ export default function ShelterDashboardPage() {
     () => shelters.filter((s) => s.ownerUserId === session?.id),
     [shelters, session?.id],
   );
+
+  const primaryShelter = myShelters[0];
+  const savedArcadeEmail = primaryShelter
+    ? getSavedShelterArcadeUserId(primaryShelter)
+    : "";
+
+  function requireArcadeEmail() {
+    if (!primaryShelter) return null;
+    if (calendarMode !== "arcade") return primaryShelter.email;
+    return promptForShelterArcadeUserId(primaryShelter, updateShelter);
+  }
 
   const myDogs = useMemo(
     () => dogs.filter((d) => myShelters.some((s) => s.id === d.shelterId)),
@@ -119,10 +141,26 @@ export default function ShelterDashboardPage() {
     }
   }, [myDogs, dogSort]);
 
+  const pending = useMemo(
+    () =>
+      appointments
+        .filter(
+          (a) =>
+            a.status === "pending" &&
+            myShelters.some((s) => s.id === a.shelterId),
+        )
+        .sort((a, b) => a.startsAt.localeCompare(b.startsAt)),
+    [appointments, myShelters],
+  );
+
   const visits = useMemo(
     () =>
       appointments
-        .filter((a) => myShelters.some((s) => s.id === a.shelterId))
+        .filter(
+          (a) =>
+            (a.status === "approved" || a.status === "scheduled") &&
+            myShelters.some((s) => s.id === a.shelterId),
+        )
         .sort((a, b) => a.startsAt.localeCompare(b.startsAt)),
     [appointments, myShelters],
   );
@@ -179,6 +217,112 @@ export default function ShelterDashboardPage() {
     );
   }
 
+  async function checkShelterCalendarAuth() {
+    if (!primaryShelter) return;
+    const arcadeEmail = requireArcadeEmail();
+    if (!arcadeEmail) {
+      setStatusMsg("Arcade email is required to connect.");
+      return;
+    }
+    setLoading(true);
+    setStatusMsg(null);
+    try {
+      const res = await fetch("/api/schedule", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "auth-status",
+          shelterArcadeUserId: arcadeEmail,
+          calendarMode,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Auth check failed");
+      if (data.authorized) {
+        setAuthUrl(null);
+        setStatusMsg(`Connected as ${arcadeEmail}.`);
+      } else {
+        setAuthUrl(data.authUrl ?? null);
+        setStatusMsg(
+          `Authorize Google for ${arcadeEmail}, then click Connect Google Calendar.`,
+        );
+      }
+    } catch (e) {
+      setStatusMsg(e instanceof Error ? e.message : "Auth check failed");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function approveRequest(id: string) {
+    const appt = appointments.find((a) => a.id === id);
+    const dog = appt ? dogs.find((d) => d.id === appt.dogId) : undefined;
+    const shelter = appt
+      ? shelters.find((s) => s.id === appt.shelterId)
+      : undefined;
+    if (!appt || !dog || !shelter) return;
+
+    const arcadeEmail =
+      calendarMode === "arcade"
+        ? promptForShelterArcadeUserId(shelter, updateShelter)
+        : shelter.email;
+    if (!arcadeEmail) {
+      setStatusMsg("Arcade email is required to approve with Arcade.");
+      return;
+    }
+
+    setLoading(true);
+    setStatusMsg(null);
+    setAuthUrl(null);
+    try {
+      const res = await fetch("/api/schedule", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "approve",
+          dogId: dog.id,
+          shelterArcadeUserId: arcadeEmail,
+          calendarMode,
+          dogName: dog.name,
+          shelterName: shelter.name,
+          shelterAddress: `${shelter.address}, ${shelter.city}`,
+          interactionType: appt.interactionType,
+          startsAt: appt.startsAt,
+          endsAt: appt.endsAt,
+          userName: appt.userName,
+          userEmail: appt.userEmail,
+          instructions: "Please bring a photo ID and arrive 5 minutes early.",
+        }),
+      });
+      const data = await res.json();
+      if (res.status === 401 || data.code === "CALENDAR_AUTH_REQUIRED") {
+        setAuthUrl(data.authUrl ?? null);
+        setStatusMsg(
+          data.error ||
+            "Connect shelter Google Calendar / Gmail, then approve again.",
+        );
+        return;
+      }
+      if (!res.ok) throw new Error(data.error || "Approval failed");
+
+      updateAppointment(id, {
+        status: "scheduled",
+        calendarEventId: data.event.id,
+        calendarProvider: data.event.provider,
+        emailId: data.email?.id,
+        notes: data.event.htmlLink || appt.notes,
+      });
+
+      setStatusMsg(
+        `Approved ${dog.name} visit — calendar invite + email sent to ${appt.userEmail}.`,
+      );
+    } catch (e) {
+      setStatusMsg(e instanceof Error ? e.message : "Approval failed");
+    } finally {
+      setLoading(false);
+    }
+  }
+
   function addSampleDog(photoUrl?: string) {
     const shelterId = myShelters[0]?.id ?? "BV-012345";
     const dog: Dog = {
@@ -202,8 +346,8 @@ export default function ShelterDashboardPage() {
       goodWithStrangers: true,
       specialNeeds: null,
       interactionTypes: ["day_fostering", "dog_walking"],
-      availability: myShelters[0]?.availability ?? [],
-      location: myShelters[0]?.city ?? "San Francisco, CA",
+      availability: primaryShelter?.availability ?? [],
+      location: primaryShelter?.city ?? "San Francisco, CA",
       distanceMiles: 5,
       shelterNotes: "",
       experienceLog: [],
@@ -274,13 +418,133 @@ export default function ShelterDashboardPage() {
           <p className="mt-3 text-sm text-[var(--brand)]">{uploadNotice}</p>
         )}
 
+        <div className="mt-6 rounded-3xl bg-white p-6 ring-1 ring-[var(--line)]">
+          <h2 className="font-display text-xl">Shelter Google Calendar</h2>
+          <p className="mt-1 text-sm text-[var(--ink-soft)]">
+            In Arcade mode you&apos;ll be prompted for the email of your
+            signed-in Arcade account. Events are tagged per dog ID; approving a
+            match sends a calendar invite + email to the WFH user.
+          </p>
+          {savedArcadeEmail && (
+            <p className="mt-2 text-xs text-[var(--ink-soft)]">
+              Saved Arcade email: <strong>{savedArcadeEmail}</strong>{" "}
+              <button
+                type="button"
+                className="underline"
+                onClick={() => {
+                  if (!primaryShelter) return;
+                  promptForShelterArcadeUserId(primaryShelter, updateShelter);
+                }}
+              >
+                change
+              </button>
+            </p>
+          )}
+
+          <div className="mt-4 flex flex-wrap items-center gap-3">
+            <div className="flex rounded-full bg-[var(--bg)] p-1">
+              <button
+                type="button"
+                className={`rounded-full px-3 py-1 text-sm ${
+                  calendarMode === "mock" ? "bg-[var(--brand)] text-white" : ""
+                }`}
+                onClick={() => setCalendarMode("mock")}
+              >
+                Mock
+              </button>
+              <button
+                type="button"
+                className={`rounded-full px-3 py-1 text-sm ${
+                  calendarMode === "arcade"
+                    ? "bg-[var(--brand)] text-white"
+                    : ""
+                }`}
+                onClick={() => setCalendarMode("arcade")}
+              >
+                Arcade.dev
+              </button>
+            </div>
+            <Button
+              variant="secondary"
+              disabled={loading}
+              onClick={checkShelterCalendarAuth}
+            >
+              {calendarMode === "arcade"
+                ? "Connect with Arcade…"
+                : "Check connection"}
+            </Button>
+            {authUrl && (
+              <Button
+                onClick={() =>
+                  window.open(authUrl, "_blank", "noopener,noreferrer")
+                }
+              >
+                Open Google consent
+              </Button>
+            )}
+          </div>
+          {statusMsg && (
+            <p className="mt-3 text-sm text-[var(--ink-soft)]">{statusMsg}</p>
+          )}
+        </div>
+
         <div className="mt-8 grid gap-4 sm:grid-cols-3">
           <Stat label="Dogs checked out" value={dogsCheckedOut} />
           <Stat label="Requests" value={requestCount} />
           <Stat label="Upcoming visits" value={upcomingVisits.length} />
         </div>
 
-        <section className="mt-8 grid items-start gap-4 md:grid-cols-[minmax(0,17.5rem)_minmax(0,1fr)] lg:grid-cols-[minmax(0,20rem)_minmax(0,1fr)] lg:gap-6">
+        <section className="mt-10 rounded-3xl bg-white p-6 ring-1 ring-[var(--line)]">
+          <h2 className="font-display text-2xl">Pending match requests</h2>
+          <p className="mt-1 text-sm text-[var(--ink-soft)]">
+            Approve to create a dog-tagged calendar event and email the invite.
+          </p>
+          {pending.length === 0 ? (
+            <p className="mt-4 text-sm text-[var(--ink-soft)]">
+              No pending requests. When a WFH user requests a time, it shows up
+              here.
+            </p>
+          ) : (
+            <ul className="mt-4 space-y-3">
+              {pending.map((a) => {
+                const d = dogs.find((x) => x.id === a.dogId);
+                return (
+                  <li
+                    key={a.id}
+                    className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[var(--line)] px-4 py-3 text-sm"
+                  >
+                    <div>
+                      <strong>{d?.name}</strong> · {a.userName} ({a.userEmail})
+                      <span className="block text-[var(--ink-soft)]">
+                        {new Date(a.startsAt).toLocaleString()} ·{" "}
+                        {interactionLabel(a.interactionType)} · dog {a.dogId}
+                      </span>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        disabled={loading}
+                        onClick={() => approveRequest(a.id)}
+                      >
+                        Approve & send invite
+                      </Button>
+                      <Button
+                        variant="secondary"
+                        disabled={loading}
+                        onClick={() =>
+                          updateAppointment(a.id, { status: "rejected" })
+                        }
+                      >
+                        Decline
+                      </Button>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </section>
+
+                <section className="mt-8 grid items-start gap-4 md:grid-cols-[minmax(0,17.5rem)_minmax(0,1fr)] lg:grid-cols-[minmax(0,20rem)_minmax(0,1fr)] lg:gap-6">
           {monthCursor ? (
             <VisitCalendar
               month={monthCursor}
@@ -332,6 +596,7 @@ export default function ShelterDashboardPage() {
               </button>
             );
           })}
+
         </div>
 
         <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -352,6 +617,7 @@ export default function ShelterDashboardPage() {
               </div>
               <div className="space-y-2 p-4">
                 <h3 className="font-display text-xl">{dog.name}</h3>
+                <p className="text-xs text-[var(--ink-soft)]">ID: {dog.id}</p>
                 <p className="text-sm text-[var(--ink-soft)]">
                   {dog.breed} · {dog.size} · {dog.energyLevel} energy
                 </p>

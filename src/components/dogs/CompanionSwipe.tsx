@@ -6,6 +6,7 @@ import { motion, useMotionValue, useTransform, type PanInfo } from "framer-motio
 import { Heart, Info, MapPin, X } from "@phosphor-icons/react";
 import type { Dog, MatchResult } from "@/lib/types";
 import { useDemo } from "@/lib/demo/store";
+import { Button } from "@/components/ui/Button";
 
 function formatAge(years: number) {
   if (years < 1) {
@@ -27,12 +28,17 @@ export function CompanionSwipe({
   onPass,
   onSave,
   onOpen,
+  onComplete,
+  required = false,
 }: {
   dogs: Dog[];
   matches: Record<string, MatchResult>;
   onPass: (id: string) => void;
   onSave: (id: string) => void;
   onOpen: (id: string) => void;
+  onComplete?: () => void;
+  /** When true, copy emphasizes finishing the deck before continuing. */
+  required?: boolean;
 }) {
   const { getShelter } = useDemo();
   const [index, setIndex] = useState(0);
@@ -47,10 +53,21 @@ export function CompanionSwipe({
   if (!dog) {
     return (
       <div className="rounded-3xl border border-dashed border-[var(--line)] bg-white/70 p-10 text-center">
-        <p className="font-display text-2xl">You&apos;ve seen everyone nearby</p>
-        <p className="mt-2 text-[var(--ink-soft)]">
-          Check Matches for dogs you saved, or continue browsing Discover.
+        <p className="font-display text-2xl">
+          {required
+            ? "You've reviewed every companion"
+            : "You've seen everyone nearby"}
         </p>
+        <p className="mt-2 text-[var(--ink-soft)]">
+          {required
+            ? "Saved dogs are in Matches. Continue to your dashboard."
+            : "Check Matches for dogs you saved, or continue browsing Discover."}
+        </p>
+        {required && onComplete && (
+          <Button className="mt-6" onClick={onComplete}>
+            Continue
+          </Button>
+        )}
       </div>
     );
   }
@@ -76,7 +93,9 @@ export function CompanionSwipe({
   return (
     <div className="mx-auto w-full max-w-md">
       <p className="mb-3 text-center text-sm text-[var(--ink-soft)]">
-        Find a compatible companion · {remaining} left
+        {required
+          ? `Swipe to find a fit · ${remaining} left (required)`
+          : `Find a compatible companion · ${remaining} left`}
       </p>
 
       <div className="rounded-[2rem] bg-[var(--brand)] p-4 shadow-[0_24px_60px_-28px_rgba(20,82,57,0.55)] sm:p-5">

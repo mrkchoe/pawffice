@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test:arcade": "npx tsx scripts/test-arcade-compat.ts"
   },
   "dependencies": {
     "@arcadeai/arcadejs": "^2.4.1",

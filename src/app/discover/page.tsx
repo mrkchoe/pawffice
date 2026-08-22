@@ -20,6 +20,7 @@ export default function DiscoverPage() {
     saveDog,
     passDog,
     hydrated,
+    onboarding,
   } = useDemo();
   const [view, setView] = useState<"grid" | "companion">("companion");
 
@@ -59,6 +60,24 @@ export default function DiscoverPage() {
           <h1 className="font-display text-3xl">Sign in to discover dogs</h1>
           <Button className="mt-6" onClick={() => router.push("/demo")}>
             Open demo login
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  if (session.role === "wfh" && onboarding.step !== "done") {
+    return (
+      <div className="min-h-screen">
+        <AppNav />
+        <div className="mx-auto max-w-lg px-4 py-16 text-center">
+          <h1 className="font-display text-3xl">Finish setup first</h1>
+          <p className="mt-2 text-[var(--ink-soft)]">
+            Tell us if you have a dog in mind, or set your 9–3 availability and
+            swipe through companions.
+          </p>
+          <Button className="mt-6" onClick={() => router.push("/onboarding")}>
+            Continue setup
           </Button>
         </div>
       </div>

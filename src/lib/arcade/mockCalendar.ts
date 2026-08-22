@@ -4,55 +4,63 @@ import type {
   CalendarProvider,
   TimeRange,
 } from "./types";
+import { dogIdTag, eventBelongsToDog } from "./dogTags";
 
 /**
- * Demo calendar provider — no Arcade API key required.
- * Pretends the user has a few standing meetings so scheduling still
- * has realistic constraints for the hackathon story.
+ * Demo shelter calendar — no Arcade key required.
+ * Synthesizes dog-scoped busy blocks so slot finding still works offline.
  */
 export class MockCalendarProvider implements CalendarProvider {
   async ensureAuthorized() {
     return { authorized: true as const };
   }
 
-  async getBusyTimes(start: Date, end: Date): Promise<TimeRange[]> {
+  async getBusyTimesForDog(
+    dogId: string,
+    start: Date,
+    end: Date,
+  ): Promise<TimeRange[]> {
     const busy: TimeRange[] = [];
     const cursor = new Date(start);
     cursor.setHours(0, 0, 0, 0);
+    // Stable offset per dog so different dogs block different hours.
+    const offset = hashDog(dogId) % 3;
 
     while (cursor < end) {
-      const day = cursor.getDay(); // 0 Sun … 6 Sat
-      // Standing standup weekdays 9–10
+      const day = cursor.getDay();
       if (day >= 1 && day <= 5) {
         busy.push({
-          start: at(cursor, 9, 0),
-          end: at(cursor, 10, 0),
+          start: at(cursor, 9 + offset, 0),
+          end: at(cursor, 10 + offset, 0),
         });
-        // Midday focus block Tue/Thu 11–12
-        if (day === 2 || day === 4) {
-          busy.push({
-            start: at(cursor, 11, 0),
-            end: at(cursor, 12, 0),
-          });
-        }
       }
       cursor.setDate(cursor.getDate() + 1);
     }
 
+    // Tag awareness for tests — filter is a no-op on synthetic data.
+    void eventBelongsToDog;
+    void dogIdTag;
     return busy;
   }
 
-  async createEvent(event: CalendarEventInput): Promise<CalendarEvent> {
+  async createDogEvent(event: CalendarEventInput): Promise<CalendarEvent> {
     return {
-      id: `mock-evt-${Date.now()}`,
+      id: `mock-evt-${event.dogId}-${Date.now()}`,
       title: event.title,
       description: event.description,
       start: event.start,
       end: event.end,
       htmlLink: undefined,
       provider: "mock",
+      dogId: event.dogId,
     };
   }
+}
+
+function hashDog(id: string) {
+  let h = 0;
+  for (let i = 0; i < id.length; i++) h = (h + id.charCodeAt(i) * (i + 1)) % 97;
+  return h;
 }
 
 function at(day: Date, hour: number, minute: number) {

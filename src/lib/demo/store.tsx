@@ -15,21 +15,34 @@ import {
   DEMO_DOGS,
   DEMO_SHELTERS,
   LEGACY_SHELTER_IDS,
+  WEEKDAY_9_TO_3,
 } from "@/data/seed";
 import type {
   ActivityItem,
   Appointment,
   BackgroundCheck,
   BackgroundCheckStatus,
+  DayAvailability,
+  DayOfWeek,
   DemoState,
   Dog,
   InteractionType,
+  OnboardingState,
+  OnboardingStep,
   Profile,
   Shelter,
   UserPreferences,
 } from "@/lib/types";
 
-const STORAGE_KEY = "pawffice-demo-v1";
+const STORAGE_KEY = "pawffice-demo-v2";
+
+function defaultOnboarding(): OnboardingState {
+  return {
+    step: "ask",
+    chosenDogId: null,
+    swipeFinished: false,
+  };
+}
 
 function emptyState(): DemoState {
   return {
@@ -44,6 +57,7 @@ function emptyState(): DemoState {
     passedDogIds: [],
     calendarMode: "mock",
     liabilityWaiver: null,
+    onboarding: defaultOnboarding(),
   };
 }
 
@@ -84,6 +98,10 @@ function loadState(): DemoState {
     return {
       ...base,
       ...parsed,
+      onboarding: {
+        ...defaultOnboarding(),
+        ...(parsed.onboarding ?? {}),
+      },
       dogs: (parsed.dogs ?? base.dogs).map(normalizeDog),
       shelters: (parsed.shelters ?? base.shelters).map(normalizeShelter),
       appointments: (parsed.appointments ?? base.appointments).map(
@@ -107,6 +125,10 @@ type DemoContextValue = DemoState & {
   unsaveDog: (dogId: string) => void;
   passDog: (dogId: string) => void;
   addAppointment: (appt: Omit<Appointment, "id" | "createdAt">) => Appointment;
+  updateAppointment: (
+    id: string,
+    patch: Partial<Appointment>,
+  ) => Appointment | null;
   upsertDog: (dog: Dog) => void;
   removeDog: (dogId: string) => void;
   updateShelter: (shelter: Shelter) => void;
@@ -114,6 +136,12 @@ type DemoContextValue = DemoState & {
   pushActivity: (message: string) => void;
   getShelter: (id: string) => Shelter | undefined;
   getDog: (id: string) => Dog | undefined;
+  setOnboardingStep: (step: OnboardingStep) => void;
+  chooseDogInMind: (dogId: string) => void;
+  chooseNoDogInMind: () => void;
+  applyWeekdayAvailability: (days: DayOfWeek[]) => void;
+  finishSwipeOnboarding: () => void;
+  completeOnboarding: () => void;
 };
 
 const DemoContext = createContext<DemoContextValue | null>(null);
@@ -178,6 +206,8 @@ export function DemoProvider({ children }: { children: ReactNode }) {
       session,
       preferences: skip ? { ...DEMO_ALEX_PREFERENCES } : null,
       backgroundCheck,
+      passedDogIds: [],
+      onboarding: defaultOnboarding(),
       activity: [
         {
           id: `act-${Date.now()}`,
@@ -206,6 +236,7 @@ export function DemoProvider({ children }: { children: ReactNode }) {
       session,
       preferences: null,
       backgroundCheck: null,
+      onboarding: { ...defaultOnboarding(), step: "done" },
       activity: [
         {
           id: `act-${Date.now()}`,
@@ -224,6 +255,7 @@ export function DemoProvider({ children }: { children: ReactNode }) {
       session: null,
       preferences: null,
       backgroundCheck: null,
+      onboarding: defaultOnboarding(),
     }));
   }, []);
 
@@ -336,7 +368,10 @@ export function DemoProvider({ children }: { children: ReactNode }) {
             {
               id: `act-${Date.now()}`,
               userId: appt.userId,
-              message: `Scheduled visit with ${dog?.name ?? "dog"}`,
+              message:
+                appt.status === "pending"
+                  ? `Requested visit with ${dog?.name ?? "dog"} (awaiting shelter approval)`
+                  : `Scheduled visit with ${dog?.name ?? "dog"}`,
               createdAt: new Date().toISOString(),
             },
             ...s.activity,
@@ -344,6 +379,41 @@ export function DemoProvider({ children }: { children: ReactNode }) {
         };
       });
       return full;
+    },
+    [],
+  );
+
+  const updateAppointment = useCallback(
+    (id: string, patch: Partial<Appointment>) => {
+      let updated: Appointment | null = null;
+      setState((s) => {
+        const appointments = s.appointments.map((a) => {
+          if (a.id !== id) return a;
+          updated = { ...a, ...patch };
+          return updated;
+        });
+        if (!updated) return s;
+        const dog = s.dogs.find((d) => d.id === updated!.dogId);
+        return {
+          ...s,
+          appointments,
+          activity: [
+            {
+              id: `act-${Date.now()}`,
+              userId: updated.userId,
+              message:
+                patch.status === "approved" || patch.status === "scheduled"
+                  ? `Shelter approved visit with ${dog?.name ?? "dog"}`
+                  : patch.status === "rejected"
+                    ? `Visit request for ${dog?.name ?? "dog"} was declined`
+                    : `Updated visit with ${dog?.name ?? "dog"}`,
+              createdAt: new Date().toISOString(),
+            },
+            ...s.activity,
+          ],
+        };
+      });
+      return updated;
     },
     [],
   );
@@ -379,6 +449,141 @@ export function DemoProvider({ children }: { children: ReactNode }) {
     setState((s) => ({ ...s, calendarMode }));
   }, []);
 
+  const setOnboardingStep = useCallback((step: OnboardingStep) => {
+    setState((s) => ({
+      ...s,
+      onboarding: { ...s.onboarding, step },
+    }));
+  }, []);
+
+  const chooseDogInMind = useCallback((dogId: string) => {
+    setState((s) => {
+      const dog = s.dogs.find((d) => d.id === dogId);
+      if (!dog || !s.session || !s.preferences) return s;
+
+      // User works around the dog's windows — mirror dog availability onto prefs.
+      const prefs: UserPreferences = {
+        ...s.preferences,
+        availability: dog.availability as DayAvailability[],
+        wfhSchedule: `Scheduling around ${dog.name}'s shelter availability`,
+      };
+
+      const alreadySaved = s.savedDogs.some(
+        (x) => x.dogId === dogId && x.userId === s.session!.id,
+      );
+
+      return {
+        ...s,
+        preferences: prefs,
+        savedDogs: alreadySaved
+          ? s.savedDogs
+          : [
+              ...s.savedDogs,
+              {
+                userId: s.session.id,
+                dogId,
+                savedAt: new Date().toISOString(),
+              },
+            ],
+        onboarding: {
+          step: "around_dog",
+          chosenDogId: dogId,
+          swipeFinished: true,
+        },
+        activity: [
+          {
+            id: `act-${Date.now()}`,
+            userId: s.session.id,
+            message: `Chose ${dog.name} — working around their availability`,
+            createdAt: new Date().toISOString(),
+          },
+          ...s.activity,
+        ],
+      };
+    });
+  }, []);
+
+  const chooseNoDogInMind = useCallback(() => {
+    setState((s) => ({
+      ...s,
+      onboarding: {
+        step: "availability",
+        chosenDogId: null,
+        swipeFinished: false,
+      },
+      activity: s.session
+        ? [
+            {
+              id: `act-${Date.now()}`,
+              userId: s.session.id,
+              message: "No dog in mind — setting weekday availability",
+              createdAt: new Date().toISOString(),
+            },
+            ...s.activity,
+          ]
+        : s.activity,
+    }));
+  }, []);
+
+  const applyWeekdayAvailability = useCallback((days: DayOfWeek[]) => {
+    setState((s) => {
+      if (!s.preferences || !s.session) return s;
+      const availability = WEEKDAY_9_TO_3.filter((d) => days.includes(d.day));
+      return {
+        ...s,
+        preferences: {
+          ...s.preferences,
+          availability,
+          wfhSchedule: "Available weekdays 9am–3pm (selected days)",
+        },
+        onboarding: {
+          ...s.onboarding,
+          step: "swipe",
+          swipeFinished: false,
+        },
+        passedDogIds: [],
+        activity: [
+          {
+            id: `act-${Date.now()}`,
+            userId: s.session.id,
+            message: "Saved 9am–3pm weekday availability — start swiping",
+            createdAt: new Date().toISOString(),
+          },
+          ...s.activity,
+        ],
+      };
+    });
+  }, []);
+
+  const finishSwipeOnboarding = useCallback(() => {
+    setState((s) => ({
+      ...s,
+      onboarding: {
+        ...s.onboarding,
+        step: "done",
+        swipeFinished: true,
+      },
+      activity: s.session
+        ? [
+            {
+              id: `act-${Date.now()}`,
+              userId: s.session.id,
+              message: "Finished companion swipe matching",
+              createdAt: new Date().toISOString(),
+            },
+            ...s.activity,
+          ]
+        : s.activity,
+    }));
+  }, []);
+
+  const completeOnboarding = useCallback(() => {
+    setState((s) => ({
+      ...s,
+      onboarding: { ...s.onboarding, step: "done" },
+    }));
+  }, []);
+
   const value = useMemo<DemoContextValue>(
     () => ({
       ...state,
@@ -393,11 +598,18 @@ export function DemoProvider({ children }: { children: ReactNode }) {
       unsaveDog,
       passDog,
       addAppointment,
+      updateAppointment,
       upsertDog,
       removeDog,
       updateShelter,
       setCalendarMode,
       pushActivity,
+      setOnboardingStep,
+      chooseDogInMind,
+      chooseNoDogInMind,
+      applyWeekdayAvailability,
+      finishSwipeOnboarding,
+      completeOnboarding,
       getShelter: (id) => state.shelters.find((s) => s.id === id),
       getDog: (id) => state.dogs.find((d) => d.id === id),
     }),
@@ -414,11 +626,18 @@ export function DemoProvider({ children }: { children: ReactNode }) {
       unsaveDog,
       passDog,
       addAppointment,
+      updateAppointment,
       upsertDog,
       removeDog,
       updateShelter,
       setCalendarMode,
       pushActivity,
+      setOnboardingStep,
+      chooseDogInMind,
+      chooseNoDogInMind,
+      applyWeekdayAvailability,
+      finishSwipeOnboarding,
+      completeOnboarding,
     ],
   );
 
