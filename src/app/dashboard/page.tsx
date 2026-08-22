@@ -46,7 +46,13 @@ export default function DashboardPage() {
   const upcoming = useMemo(
     () =>
       appointments
-        .filter((a) => a.userId === session?.id && a.status === "scheduled")
+        .filter(
+          (a) =>
+            a.userId === session?.id &&
+            (a.status === "scheduled" ||
+              a.status === "approved" ||
+              a.status === "pending"),
+        )
         .sort((a, b) => a.startsAt.localeCompare(b.startsAt))
         .slice(0, 3),
     [appointments, session?.id],

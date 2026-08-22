@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { AppNav } from "@/components/layout/AppNav";
 import { Button } from "@/components/ui/Button";
 import { interactionLabel, useDemo } from "@/lib/demo/store";
+import { getSavedShelterArcadeUserId } from "@/lib/arcade/shelterUser";
 import type { InteractionType, SuggestedSlot } from "@/lib/types";
 
 function ScheduleInner() {
@@ -35,7 +36,6 @@ function ScheduleInner() {
   const [message, setMessage] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null);
 
-  // When the selected dog changes, clear override so we use that dog's default type.
   if (dogId !== activeDogId) {
     setActiveDogId(dogId);
     setInteractionOverride(null);
@@ -47,32 +47,64 @@ function ScheduleInner() {
   const upcoming = useMemo(
     () =>
       appointments
-        .filter((a) => a.userId === session?.id && a.status === "scheduled")
+        .filter(
+          (a) =>
+            a.userId === session?.id &&
+            (a.status === "pending" ||
+              a.status === "approved" ||
+              a.status === "scheduled"),
+        )
         .sort((a, b) => a.startsAt.localeCompare(b.startsAt)),
     [appointments, session?.id],
   );
 
   async function loadSlots() {
-    if (!session || !preferences || !dog) return;
+    if (!session || !preferences || !dog || !shelter) return;
     setLoading(true);
     setMessage(null);
     try {
+      const shelterArcadeUserId =
+        calendarMode === "arcade"
+          ? getSavedShelterArcadeUserId(shelter)
+          : shelter.email;
+
+      if (calendarMode === "arcade" && !shelterArcadeUserId) {
+        setMessage(
+          "Shelter hasn’t connected Arcade yet. Log in as the shelter and click “Connect with Arcade…”, or switch to Mock.",
+        );
+        setSlots([]);
+        return;
+      }
+
       const res = await fetch("/api/schedule", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           action: "suggest",
-          userId: session.id,
+          dogId: dog.id,
+          shelterArcadeUserId,
           calendarMode,
           userAvailability: preferences.availability,
           dogAvailability: dog.availability,
         }),
       });
       const data = await res.json();
+      if (res.status === 401 || data.code === "CALENDAR_AUTH_REQUIRED") {
+        setMessage(
+          "The shelter still needs to finish Google consent on the shelter dashboard. Or use Mock mode for the demo.",
+        );
+        setSlots([]);
+        return;
+      }
       if (!res.ok) throw new Error(data.error || "Failed to load slots");
       setSlots(data.slots ?? []);
       setNote(data.note ?? null);
       setSelected(data.slots?.[0]?.startsAt ?? null);
+      if (!data.slots?.length) {
+        setMessage(
+          "No open times for this dog on the shelter calendar in the next two weeks.",
+        );
+      }
     } catch (e) {
       setMessage(e instanceof Error ? e.message : "Failed");
     } finally {
@@ -80,59 +112,33 @@ function ScheduleInner() {
     }
   }
 
-  async function book() {
+  function requestVisit() {
     if (!session || !dog || !shelter || !selected) return;
     if (backgroundCheck?.status !== "approved") {
-      setMessage("Background check must be approved before scheduling.");
+      setMessage("Background check must be approved before requesting a visit.");
       return;
     }
     const slot = slots.find((s) => s.startsAt === selected);
     if (!slot) return;
 
-    setLoading(true);
-    setMessage(null);
-    try {
-      const res = await fetch("/api/schedule", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "book",
-          userId: session.id,
-          calendarMode,
-          dogName: dog.name,
-          shelterName: shelter.name,
-          shelterEmail: shelter.email,
-          shelterPhone: shelter.phone,
-          shelterAddress: `${shelter.address}, ${shelter.city}`,
-          interactionType: interaction,
-          startsAt: slot.startsAt,
-          endsAt: slot.endsAt,
-          instructions: "Please bring a photo ID and arrive 5 minutes early.",
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Booking failed");
+    addAppointment({
+      userId: session.id,
+      userName: session.name,
+      userEmail: session.email,
+      dogId: dog.id,
+      shelterId: shelter.id,
+      interactionType: interaction,
+      startsAt: slot.startsAt,
+      endsAt: slot.endsAt,
+      status: "pending",
+      calendarProvider: calendarMode,
+      notes: `Requested slot via ${calendarMode} shelter calendar · dog ${dog.id}`,
+    });
 
-      addAppointment({
-        userId: session.id,
-        dogId: dog.id,
-        shelterId: shelter.id,
-        interactionType: interaction,
-        startsAt: slot.startsAt,
-        endsAt: slot.endsAt,
-        status: "scheduled",
-        calendarEventId: data.event.id,
-        calendarProvider: data.event.provider,
-        notes: data.event.title,
-      });
-
-      setMessage(`Booked! Calendar event created via ${data.event.provider}.`);
-      router.push("/dashboard");
-    } catch (e) {
-      setMessage(e instanceof Error ? e.message : "Booking failed");
-    } finally {
-      setLoading(false);
-    }
+    setMessage(
+      `Request sent for ${dog.name}. The shelter will approve and you’ll get an email + calendar invite.`,
+    );
+    setSlots([]);
   }
 
   return (
@@ -141,7 +147,8 @@ function ScheduleInner() {
       <div className="mx-auto max-w-3xl px-4 py-8">
         <h1 className="font-display text-4xl">Schedule</h1>
         <p className="mt-1 text-[var(--ink-soft)]">
-          Compare your calendar with shelter availability and book a visit.
+          Times come from the shelter&apos;s Google Calendar for this dog&apos;s
+          ID — you request a slot; the shelter confirms.
         </p>
 
         {!session && (
@@ -161,7 +168,7 @@ function ScheduleInner() {
             >
               Approve it on Profile
             </button>{" "}
-            to unlock booking.
+            to unlock booking requests.
           </div>
         )}
 
@@ -172,6 +179,9 @@ function ScheduleInner() {
                 Meet {dog.name} — {shelter.name}
               </h2>
               <p className="mt-1 text-sm text-[var(--ink-soft)]">
+                Dog ID: <code className="text-xs">{dog.id}</code>
+              </p>
+              <p className="text-sm text-[var(--ink-soft)]">
                 {shelter.address}, {shelter.city}
               </p>
 
@@ -194,7 +204,7 @@ function ScheduleInner() {
 
               <div className="mt-4 flex flex-wrap items-center gap-3">
                 <span className="text-sm text-[var(--ink-soft)]">
-                  Calendar provider
+                  Shelter calendar source
                 </span>
                 <div className="flex rounded-full bg-[var(--bg)] p-1">
                   <button
@@ -222,12 +232,8 @@ function ScheduleInner() {
                 </div>
               </div>
 
-              <Button
-                className="mt-5"
-                disabled={loading}
-                onClick={loadSlots}
-              >
-                {loading ? "Finding times…" : "Find overlapping times"}
+              <Button className="mt-5" disabled={loading} onClick={loadSlots}>
+                {loading ? "Finding times…" : "Find open times for this dog"}
               </Button>
               {note && (
                 <p className="mt-3 text-xs text-[var(--ink-soft)]">{note}</p>
@@ -251,7 +257,7 @@ function ScheduleInner() {
                       >
                         {slot.label}
                         <span className="mt-1 block text-xs text-[var(--ink-soft)]">
-                          via {slot.source} calendar
+                          shelter calendar · {slot.source}
                         </span>
                       </button>
                     </li>
@@ -264,9 +270,9 @@ function ScheduleInner() {
                     !selected ||
                     backgroundCheck?.status !== "approved"
                   }
-                  onClick={book}
+                  onClick={requestVisit}
                 >
-                  Confirm & create calendar event
+                  Request this time (await shelter approval)
                 </Button>
               </div>
             )}
@@ -280,7 +286,7 @@ function ScheduleInner() {
         )}
 
         <div className="mt-10">
-          <h2 className="font-display text-2xl">Upcoming visits</h2>
+          <h2 className="font-display text-2xl">Your visit requests</h2>
           {upcoming.length === 0 ? (
             <p className="mt-2 text-sm text-[var(--ink-soft)]">None yet.</p>
           ) : (
@@ -294,9 +300,9 @@ function ScheduleInner() {
                   >
                     <strong>{d?.name}</strong> ·{" "}
                     {new Date(a.startsAt).toLocaleString()} ·{" "}
-                    {interactionLabel(a.interactionType)}
+                    <span className="capitalize">{a.status}</span>
                     <span className="block text-xs text-[var(--ink-soft)]">
-                      calendar: {a.calendarProvider} ({a.calendarEventId})
+                      dog {a.dogId}
                     </span>
                   </li>
                 );

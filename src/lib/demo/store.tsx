@@ -87,6 +87,10 @@ type DemoContextValue = DemoState & {
   unsaveDog: (dogId: string) => void;
   passDog: (dogId: string) => void;
   addAppointment: (appt: Omit<Appointment, "id" | "createdAt">) => Appointment;
+  updateAppointment: (
+    id: string,
+    patch: Partial<Appointment>,
+  ) => Appointment | null;
   upsertDog: (dog: Dog) => void;
   removeDog: (dogId: string) => void;
   updateShelter: (shelter: Shelter) => void;
@@ -320,7 +324,10 @@ export function DemoProvider({ children }: { children: ReactNode }) {
             {
               id: `act-${Date.now()}`,
               userId: appt.userId,
-              message: `Scheduled visit with ${dog?.name ?? "dog"}`,
+              message:
+                appt.status === "pending"
+                  ? `Requested visit with ${dog?.name ?? "dog"} (awaiting shelter approval)`
+                  : `Scheduled visit with ${dog?.name ?? "dog"}`,
               createdAt: new Date().toISOString(),
             },
             ...s.activity,
@@ -328,6 +335,41 @@ export function DemoProvider({ children }: { children: ReactNode }) {
         };
       });
       return full;
+    },
+    [],
+  );
+
+  const updateAppointment = useCallback(
+    (id: string, patch: Partial<Appointment>) => {
+      let updated: Appointment | null = null;
+      setState((s) => {
+        const appointments = s.appointments.map((a) => {
+          if (a.id !== id) return a;
+          updated = { ...a, ...patch };
+          return updated;
+        });
+        if (!updated) return s;
+        const dog = s.dogs.find((d) => d.id === updated!.dogId);
+        return {
+          ...s,
+          appointments,
+          activity: [
+            {
+              id: `act-${Date.now()}`,
+              userId: updated.userId,
+              message:
+                patch.status === "approved" || patch.status === "scheduled"
+                  ? `Shelter approved visit with ${dog?.name ?? "dog"}`
+                  : patch.status === "rejected"
+                    ? `Visit request for ${dog?.name ?? "dog"} was declined`
+                    : `Updated visit with ${dog?.name ?? "dog"}`,
+              createdAt: new Date().toISOString(),
+            },
+            ...s.activity,
+          ],
+        };
+      });
+      return updated;
     },
     [],
   );
@@ -512,6 +554,7 @@ export function DemoProvider({ children }: { children: ReactNode }) {
       unsaveDog,
       passDog,
       addAppointment,
+      updateAppointment,
       upsertDog,
       removeDog,
       updateShelter,
@@ -539,6 +582,7 @@ export function DemoProvider({ children }: { children: ReactNode }) {
       unsaveDog,
       passDog,
       addAppointment,
+      updateAppointment,
       upsertDog,
       removeDog,
       updateShelter,
