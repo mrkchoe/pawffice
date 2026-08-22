@@ -19,13 +19,14 @@ const CLEAN_BG_USER_IDS = new Set(["demo-alex"]);
 function CleanBgCheck({ userId }: { userId?: string }) {
   if (!userId || !CLEAN_BG_USER_IDS.has(userId)) return null;
   return (
-    <CheckCircle
-      className="ml-1.5 inline-block shrink-0 align-[-0.15em] text-emerald-600"
-      size={18}
-      weight="fill"
-      aria-label="Background check clear"
-      title="Background check clear"
-    />
+    <span title="Background check clear" className="inline-flex">
+      <CheckCircle
+        className="ml-1.5 inline-block shrink-0 align-[-0.15em] text-emerald-600"
+        size={18}
+        weight="fill"
+        aria-label="Background check clear"
+      />
+    </span>
   );
 }
 
