@@ -60,6 +60,9 @@ export default function DogDetailPage() {
           <p className="mt-2 text-lg text-[var(--ink-soft)]">
             {dog.ageYears} years · {dog.breed} · {dog.sex} · {dog.location}
           </p>
+          <p className="mt-2 text-sm font-semibold text-[var(--accent)]">
+            Rating {dog.rating.toFixed(1)} / 5
+          </p>
 
           <div className="mt-6 rounded-2xl bg-white p-5 ring-1 ring-[var(--line)]">
             <h2 className="font-display text-xl">Why you&apos;re a match</h2>
@@ -83,6 +86,7 @@ export default function DogDetailPage() {
             <Info label="Exercise" value={`${dog.exerciseMinutes} min / day`} />
             <Info label="Shelter" value={shelter?.name ?? "—"} />
             <Info label="Shelter ID" value={dog.shelterId} />
+            <Info label="Rating" value={`${dog.rating.toFixed(1)} / 5`} />
             <Info
               label="Good with"
               value={[

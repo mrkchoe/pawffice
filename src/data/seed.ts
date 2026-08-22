@@ -1,4 +1,5 @@
 import type {
+  Appointment,
   DayAvailability,
   Dog,
   DogExperienceEntry,
@@ -263,8 +264,21 @@ const DEMO_DOGS_BASE = [
     location: "Oakland, CA",
     distanceMiles: 7.4,
   },
-] satisfies Omit<Dog, "shelterNotes" | "experienceLog" | "interactionTypes">[] &
-  { interactionTypes: readonly string[] }[];
+] satisfies Omit<
+  Dog,
+  "shelterNotes" | "experienceLog" | "interactionTypes" | "rating"
+>[] & { interactionTypes: readonly string[] }[];
+
+const DEMO_RATINGS: Record<string, number> = {
+  "dog-luna": 4.9,
+  "dog-milo": 4.2,
+  "dog-biscuit": 4.8,
+  "dog-nova": 3.9,
+  "dog-olive": 4.7,
+  "dog-duke": 4.1,
+  "dog-pepper": 4.6,
+  "dog-harbor": 4.5,
+};
 
 const SHELTER_NOTES: Record<
   string,
@@ -379,10 +393,99 @@ export const DEMO_DOGS: Dog[] = DEMO_DOGS_BASE.map((dog) => {
   return {
     ...dog,
     interactionTypes: [...dog.interactionTypes],
+    rating: DEMO_RATINGS[dog.id] ?? 4.5,
     shelterNotes: extra?.shelterNotes ?? "",
     experienceLog: extra?.experienceLog ?? [],
   };
 });
+
+/** Demo upcoming visits for the shelter dashboard (relative to Aug 2026). */
+export const DEMO_APPOINTMENTS: Appointment[] = [
+  {
+    id: "appt-demo-luna",
+    userId: "demo-alex",
+    userName: "Alex Rivera",
+    userEmail: "alex@pawffice.demo",
+    dogId: "dog-luna",
+    shelterId: "BV-012345",
+    interactionType: "day_fostering",
+    startsAt: "2026-08-25T14:00:00.000Z",
+    endsAt: "2026-08-25T18:00:00.000Z",
+    status: "scheduled",
+    calendarProvider: "mock",
+    createdAt: "2026-08-20T12:00:00.000Z",
+  },
+  {
+    id: "appt-demo-biscuit",
+    userId: "demo-sam",
+    userName: "Sam Chen",
+    userEmail: "sam@pawffice.demo",
+    dogId: "dog-biscuit",
+    shelterId: "BV-012345",
+    interactionType: "dog_walking",
+    startsAt: "2026-08-26T17:00:00.000Z",
+    endsAt: "2026-08-26T18:00:00.000Z",
+    status: "scheduled",
+    calendarProvider: "mock",
+    createdAt: "2026-08-20T12:05:00.000Z",
+  },
+  {
+    id: "appt-demo-olive",
+    userId: "demo-casey",
+    userName: "Casey Nguyen",
+    userEmail: "casey@pawffice.demo",
+    dogId: "dog-olive",
+    shelterId: "BV-012345",
+    interactionType: "day_fostering",
+    startsAt: "2026-08-28T13:00:00.000Z",
+    endsAt: "2026-08-28T17:00:00.000Z",
+    status: "scheduled",
+    calendarProvider: "mock",
+    createdAt: "2026-08-21T09:00:00.000Z",
+  },
+  {
+    id: "appt-demo-milo",
+    userId: "demo-jordan",
+    userName: "Jordan Blake",
+    userEmail: "jordan@pawffice.demo",
+    dogId: "dog-milo",
+    shelterId: "OR-067891",
+    interactionType: "dog_walking",
+    startsAt: "2026-08-29T16:00:00.000Z",
+    endsAt: "2026-08-29T17:30:00.000Z",
+    status: "scheduled",
+    calendarProvider: "mock",
+    createdAt: "2026-08-21T10:00:00.000Z",
+  },
+  {
+    id: "appt-demo-pepper",
+    userId: "demo-riley",
+    userName: "Riley Morgan",
+    userEmail: "riley@pawffice.demo",
+    dogId: "dog-pepper",
+    shelterId: "BV-012345",
+    interactionType: "day_fostering",
+    startsAt: "2026-09-02T14:00:00.000Z",
+    endsAt: "2026-09-02T18:00:00.000Z",
+    status: "scheduled",
+    calendarProvider: "mock",
+    createdAt: "2026-08-22T08:00:00.000Z",
+  },
+  {
+    id: "appt-demo-harbor",
+    userId: "demo-alex",
+    userName: "Alex Rivera",
+    userEmail: "alex@pawffice.demo",
+    dogId: "dog-harbor",
+    shelterId: "OR-067891",
+    interactionType: "trial_adoption",
+    startsAt: "2026-09-05T15:00:00.000Z",
+    endsAt: "2026-09-05T19:00:00.000Z",
+    status: "scheduled",
+    calendarProvider: "mock",
+    createdAt: "2026-08-22T11:00:00.000Z",
+  },
+];
 
 export const WEEKDAY_9_TO_3: DayAvailability[] = [
   { day: "monday", ranges: [{ start: "09:00", end: "15:00" }] },

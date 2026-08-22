@@ -125,6 +125,8 @@ export interface Dog {
   availability: DayAvailability[];
   location: string;
   distanceMiles: number;
+  /** Demo companion rating out of 5. */
+  rating: number;
   /** Freeform internal notes — never shown to WFH users. */
   shelterNotes: string;
   /** Past visits and companion experience reviews — shelter-only. */

@@ -12,6 +12,7 @@ import {
 } from "react";
 import {
   DEMO_ALEX_PREFERENCES,
+  DEMO_APPOINTMENTS,
   DEMO_DOGS,
   DEMO_SHELTERS,
   LEGACY_SHELTER_IDS,
@@ -52,7 +53,7 @@ function emptyState(): DemoState {
     shelters: DEMO_SHELTERS,
     dogs: DEMO_DOGS,
     savedDogs: [],
-    appointments: [],
+    appointments: DEMO_APPOINTMENTS,
     activity: [],
     passedDogIds: [],
     calendarMode: "mock",
@@ -69,6 +70,7 @@ function normalizeDog(dog: Dog): Dog {
   return {
     ...dog,
     shelterId: migrateShelterId(dog.shelterId),
+    rating: typeof dog.rating === "number" ? dog.rating : 4.5,
     shelterNotes: dog.shelterNotes ?? "",
     experienceLog: dog.experienceLog ?? [],
   };
@@ -104,9 +106,11 @@ function loadState(): DemoState {
       },
       dogs: (parsed.dogs ?? base.dogs).map(normalizeDog),
       shelters: (parsed.shelters ?? base.shelters).map(normalizeShelter),
-      appointments: (parsed.appointments ?? base.appointments).map(
-        normalizeAppointment,
-      ),
+      appointments: (
+        parsed.appointments?.length
+          ? parsed.appointments
+          : DEMO_APPOINTMENTS
+      ).map(normalizeAppointment),
     };
   } catch {
     return emptyState();
