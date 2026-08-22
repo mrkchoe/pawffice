@@ -42,12 +42,27 @@ function emptyState(): DemoState {
   };
 }
 
+function normalizeDog(dog: Dog): Dog {
+  return {
+    ...dog,
+    shelterNotes: dog.shelterNotes ?? "",
+    experienceLog: dog.experienceLog ?? [],
+  };
+}
+
 function loadState(): DemoState {
   if (typeof window === "undefined") return emptyState();
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return emptyState();
-    return { ...emptyState(), ...JSON.parse(raw) };
+    const parsed = JSON.parse(raw) as Partial<DemoState>;
+    const base = emptyState();
+    return {
+      ...base,
+      ...parsed,
+      dogs: (parsed.dogs ?? base.dogs).map(normalizeDog),
+      shelters: parsed.shelters ?? base.shelters,
+    };
   } catch {
     return emptyState();
   }
